@@ -12,6 +12,8 @@ Which license should govern the public `github.com/Whamp/papercuts` source and r
 
 The distribution contract requires a `LICENSE` file in each immutable release archive. This is a legal and product-direction decision, so implementation cannot choose it autonomously.
 
+`Whamp/papercuts` now exists privately so hosted Linux, macOS, and Windows validation can run without publishing unlicensed source. It must remain private until this issue records the license choice and the exact `LICENSE` text is committed.
+
 Will’s public GitHub repositories predominantly use MIT when they declare a license. Recommendation: **MIT**, matching projects such as `pi-codex-goal`, `pi-observational-memory`, `skills`, `napkin`, `pi-annotate`, and `pi-web-access`.
 
 Answer with one of:

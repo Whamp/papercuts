@@ -4,12 +4,13 @@ The canonical release channel is [github.com/Whamp/papercuts/releases](https://g
 
 ## One-time repository setup
 
-1. Create the public `Whamp/papercuts` repository and push the complete history.
-2. Enable immutable releases in the repository release settings.
-3. Allow GitHub Actions to create attestations and write release contents.
-4. Keep the workflow permission default read-only. `.github/workflows/release.yml` requests write permissions only for its release job graph.
+1. Commit the selected root `LICENSE`; GoReleaser requires it in every archive.
+2. Change the existing `Whamp/papercuts` repository from private to public. Never publish it before the license is committed.
+3. Enable immutable releases in the repository release settings.
+4. Allow GitHub Actions to create attestations and write release contents.
+5. Keep the workflow permission default read-only. `.github/workflows/release.yml` requests write permissions only for its release job graph.
 
-The repository must contain its selected `LICENSE` before any release tag is pushed. GoReleaser requires that file in every archive.
+Do not push a release tag until every setup step is complete.
 
 ## Version contract
 
