@@ -23,15 +23,16 @@ Do not push a release tag until every setup step is complete.
 ## Publish
 
 1. Confirm the branch passes CI.
-2. Confirm `git status --short` is empty.
-3. Create and push an annotated tag:
+2. Confirm the exact Go version pinned in `.github/workflows/release.yml` is still a supported, current security-patched release listed by [`go.dev/dl`](https://go.dev/dl/). Update and revalidate the workflow before tagging when it is not.
+3. Confirm `git status --short` is empty.
+4. Create and push an annotated tag:
 
    ```sh
    git tag -a v0.1.0 -m "papercuts v0.1.0"
    git push origin v0.1.0
    ```
 
-4. Watch the Release workflow. It:
+5. Watch the Release workflow. It:
    - validates the tag and source;
    - runs actionlint and a pedantic zizmor security audit;
    - runs native tests and race tests on Linux, macOS, and Windows;
@@ -41,14 +42,14 @@ Do not push a release tag until every setup step is complete.
    - creates a draft GitHub release;
    - creates GitHub artifact attestations;
    - publishes the release only after every gate passes.
-5. Verify the published release:
+6. Verify the published release:
 
    ```sh
    gh release verify v0.1.0 --repo Whamp/papercuts
    gh attestation verify papercuts_0.1.0_linux_amd64.tar.gz --repo Whamp/papercuts
    ```
 
-6. Download one archive independently, verify it against `checksums.txt`, extract it, and run `papercuts version`.
+7. Download one archive independently, verify it against `checksums.txt`, extract it, and run `papercuts version`.
 
 A failed run may leave a draft release. Inspect it before retrying. Delete only an unpublished draft and its assets; never replace a published release.
 
