@@ -8,6 +8,9 @@ on:
 permissions:
   contents: read
 
+env:
+  PATCHED_GO_VERSION: "1.26.5"
+
 concurrency:
   group: release-${{ github.ref_name }}
   cancel-in-progress: false
@@ -25,7 +28,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
-          go-version: "1.26.5"
+          go-version: ${{ env.PATCHED_GO_VERSION }}
           cache: false
       - name: Validate release tag
         shell: bash
@@ -38,11 +41,13 @@ jobs:
       - name: Check formatting
         shell: bash
         run: test -z "$(gofmt -l .)"
-      - name: Lint workflows
+      - name: Lint workflows and scripts
         shell: bash
         run: |
           go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.11
           "$(go env GOPATH)/bin/actionlint"
+          shellcheck .github/scripts/*.sh
+          .github/scripts/check-workflow-toolchains.sh
       - name: Audit workflows
         uses: zizmorcore/zizmor-action@192e21d79ab29983730a13d1382995c2307fbcaa # v0.5.7
         with:
@@ -54,6 +59,8 @@ jobs:
         run: go vet ./...
       - name: Test
         run: go test ./...
+      - name: Cross-compile commands and tests
+        run: .github/scripts/cross-compile.sh
       - name: Scan reachable vulnerabilities
         run: go run golang.org/x/vuln/cmd/govulncheck@v1.6.0 ./...
       - name: Lint
@@ -61,12 +68,20 @@ jobs:
         with:
           version: v2.12.2
           args: ./...
-      - name: Install GoReleaser
+      - name: Validate GoReleaser configuration
         uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
         with:
           distribution: goreleaser
           version: v2.14.1
           args: check
+      - name: Build clean GoReleaser snapshot
+        uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
+        with:
+          distribution: goreleaser
+          version: v2.14.1
+          args: release --snapshot --clean --skip=publish
+      - name: Inspect snapshot contract
+        run: .github/scripts/inspect-release.sh
 
   native-test:
     name: Native test (${{ matrix.os }})
@@ -83,7 +98,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
-          go-version: "1.26.5"
+          go-version: ${{ env.PATCHED_GO_VERSION }}
           cache: false
       - name: Test
         run: go test ./...
@@ -103,7 +118,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
-          go-version: "1.26.5"
+          go-version: ${{ env.PATCHED_GO_VERSION }}
           cache: false
       - name: Build with GoReleaser
         uses: goreleaser/goreleaser-action@f06c13b6b1a9625abc9e6e439d9c05a8f2190e94 # v7.2.3
@@ -111,36 +126,8 @@ jobs:
           distribution: goreleaser
           version: v2.14.1
           args: release --clean --skip=publish
-      - name: Inspect archive contract
-        shell: bash
-        run: |
-          set -euo pipefail
-          mapfile -t archives < <(find dist -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' \) | sort)
-          if [[ ${#archives[@]} -ne 6 ]]; then
-            printf 'expected 6 archives, found %d\n' "${#archives[@]}" >&2
-            printf '%s\n' "${archives[@]}" >&2
-            exit 1
-          fi
-          for archive in "${archives[@]}"; do
-            case "$archive" in
-              *.tar.gz)
-                listing=$(tar -tzf "$archive" | sort)
-                executable=papercuts
-                ;;
-              *.zip)
-                listing=$(unzip -Z1 "$archive" | sort)
-                executable=papercuts.exe
-                ;;
-            esac
-            expected=$(printf '%s\n' LICENSE README.md "$executable" | sort)
-            if [[ "$listing" != "$expected" ]]; then
-              printf 'unexpected contents in %s:\n%s\n' "$archive" "$listing" >&2
-              exit 1
-            fi
-          done
-      - name: Verify checksums independently
-        shell: bash
-        run: (cd dist && sha256sum --check checksums.txt)
+      - name: Inspect release contract and verify checksums
+        run: .github/scripts/inspect-release.sh
       - name: Upload release build
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -158,10 +145,14 @@ jobs:
         os: [ubuntu-latest, macos-latest, windows-latest]
     runs-on: ${{ matrix.os }}
     steps:
+      - name: Check out source
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          persist-credentials: false
       - name: Set up release Go
         uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
         with:
-          go-version: "1.26.5"
+          go-version: ${{ env.PATCHED_GO_VERSION }}
           cache: false
       - name: Download release build
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
@@ -181,21 +172,34 @@ jobs:
           tar -xzf "$archive" -C smoke
           ./smoke/papercuts version | grep -F "papercuts $GITHUB_REF_NAME"
           install_dir=$(mktemp -d)
-          install -m 0755 ./smoke/papercuts "$install_dir/papercuts"
-          "$install_dir/papercuts" version | grep -F "papercuts $GITHUB_REF_NAME"
+          installed="$install_dir/papercuts"
+          previous="$install_dir/papercuts.previous"
+          previous_version=v0.0.0-smoke
+          CGO_ENABLED=0 go build -trimpath \
+            -ldflags "-s -w -X github.com/Whamp/papercuts/internal/buildinfo.version=$previous_version -X github.com/Whamp/papercuts/internal/buildinfo.commit=fixture -X github.com/Whamp/papercuts/internal/buildinfo.buildDate=1970-01-01T00:00:00Z" \
+            -o "$previous" ./cmd/papercuts
+          "$previous" version | grep -F "papercuts $previous_version"
+
+          install -m 0755 ./smoke/papercuts "$installed"
+          "$installed" version | grep -F "papercuts $GITHUB_REF_NAME"
+          rm "$installed"
+
+          install -m 0755 "$previous" "$installed"
           project=$(mktemp -d)
           cd "$project"
-          "$install_dir/papercuts" init --no-agents
-          "$install_dir/papercuts" capture --severity low "release smoke test"
-          grep -F '> release smoke test' PAPERCUTS.md
-          cp "$install_dir/papercuts" "$install_dir/papercuts.rollback"
-          cp "$GITHUB_WORKSPACE/smoke/papercuts" "$install_dir/papercuts"
-          "$install_dir/papercuts" version | grep -F "papercuts $GITHUB_REF_NAME"
-          mv "$install_dir/papercuts.rollback" "$install_dir/papercuts"
-          "$install_dir/papercuts" version | grep -F "papercuts $GITHUB_REF_NAME"
-          rm "$install_dir/papercuts"
-          test ! -e "$install_dir/papercuts"
-          grep -F '> release smoke test' PAPERCUTS.md
+          "$installed" init --no-agents
+          "$installed" capture --severity low "before release upgrade"
+
+          install -m 0755 "$GITHUB_WORKSPACE/smoke/papercuts" "$installed"
+          "$installed" version | grep -F "papercuts $GITHUB_REF_NAME"
+          "$installed" capture --severity low "after release upgrade"
+
+          install -m 0755 "$previous" "$installed"
+          "$installed" version | grep -F "papercuts $previous_version"
+          rm "$installed" "$previous"
+          test ! -e "$installed"
+          grep -F '> before release upgrade' PAPERCUTS.md
+          grep -F '> after release upgrade' PAPERCUTS.md
       - name: Smoke Windows archive
         if: runner.os == 'Windows'
         shell: pwsh
@@ -211,29 +215,41 @@ jobs:
           $installDir = Join-Path $env:RUNNER_TEMP "papercuts-bin"
           New-Item -ItemType Directory -Force -Path $installDir | Out-Null
           $installed = Join-Path $installDir "papercuts.exe"
+          $previous = Join-Path $installDir "papercuts.previous.exe"
+          $previousVersion = 'v0.0.0-smoke'
+          $ldflags = "-s -w -X github.com/Whamp/papercuts/internal/buildinfo.version=$previousVersion -X github.com/Whamp/papercuts/internal/buildinfo.commit=fixture -X github.com/Whamp/papercuts/internal/buildinfo.buildDate=1970-01-01T00:00:00Z"
+          $env:CGO_ENABLED = '0'
+          go build -trimpath -ldflags $ldflags -o $previous ./cmd/papercuts
+          $version = & $previous version
+          if ($version -notlike "papercuts $previousVersion*") { throw "wrong previous version: $version" }
+
           Copy-Item .\smoke\papercuts.exe $installed
           $version = & $installed version
           if ($version -notlike "papercuts $env:GITHUB_REF_NAME*") { throw "installed wrong version: $version" }
+          Remove-Item $installed
+
+          Copy-Item $previous $installed
           $project = Join-Path $env:RUNNER_TEMP "papercuts-smoke"
           New-Item -ItemType Directory -Force -Path $project | Out-Null
           Push-Location $project
           & $installed init --no-agents
-          & $installed capture --severity low "release smoke test"
-          if (-not (Select-String -Path PAPERCUTS.md -SimpleMatch '> release smoke test' -Quiet)) {
-            throw "capture entry not found"
-          }
-          $rollback = Join-Path $installDir "papercuts.rollback.exe"
-          Copy-Item $installed $rollback
+          & $installed capture --severity low "before release upgrade"
+
           Copy-Item -Force "$env:GITHUB_WORKSPACE\smoke\papercuts.exe" $installed
           $version = & $installed version
           if ($version -notlike "papercuts $env:GITHUB_REF_NAME*") { throw "upgrade failed: $version" }
-          Move-Item -Force $rollback $installed
+          & $installed capture --severity low "after release upgrade"
+
+          Copy-Item -Force $previous $installed
           $version = & $installed version
-          if ($version -notlike "papercuts $env:GITHUB_REF_NAME*") { throw "rollback failed: $version" }
-          Remove-Item $installed
+          if ($version -notlike "papercuts $previousVersion*") { throw "rollback failed: $version" }
+          Remove-Item $installed, $previous
           if (Test-Path $installed) { throw "uninstall failed" }
-          if (-not (Select-String -Path PAPERCUTS.md -SimpleMatch '> release smoke test' -Quiet)) {
-            throw "uninstall removed or changed the log"
+          if (-not (Select-String -Path PAPERCUTS.md -SimpleMatch '> before release upgrade' -Quiet)) {
+            throw "pre-upgrade capture not found after uninstall"
+          }
+          if (-not (Select-String -Path PAPERCUTS.md -SimpleMatch '> after release upgrade' -Quiet)) {
+            throw "post-upgrade capture not found after uninstall"
           }
           Pop-Location
 

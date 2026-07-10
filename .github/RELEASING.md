@@ -23,7 +23,7 @@ Do not push a release tag until every setup step is complete.
 ## Publish
 
 1. Confirm the branch passes CI.
-2. Confirm the exact Go version pinned in `.github/workflows/release.yml` is still a supported, current security-patched release listed by [`go.dev/dl`](https://go.dev/dl/). Update and revalidate the workflow before tagging when it is not.
+2. Confirm `PATCHED_GO_VERSION` in both `.github/workflows/ci.yml` and `.github/workflows/release.yml` names the same supported, current security-patched release listed by [`go.dev/dl`](https://go.dev/dl/). Update and revalidate both workflows before tagging when it does not.
 3. Confirm `git status --short` is empty.
 4. Create and push an annotated tag:
 
