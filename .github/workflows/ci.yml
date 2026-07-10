@@ -28,6 +28,18 @@ jobs:
       - name: Check formatting
         shell: bash
         run: test -z "$(gofmt -l .)"
+      - name: Lint workflows
+        shell: bash
+        run: |
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          "$(go env GOPATH)/bin/actionlint"
+      - name: Audit workflows
+        uses: zizmorcore/zizmor-action@192e21d79ab29983730a13d1382995c2307fbcaa # v0.5.7
+        with:
+          advanced-security: false
+          annotations: true
+          persona: pedantic
+          version: 1.26.1
       - name: Vet
         run: go vet ./...
       - name: Lint
