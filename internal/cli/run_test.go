@@ -274,6 +274,20 @@ func TestRunReportsMissingProjectLogWithInitCommand(t *testing.T) {
 	}
 }
 
+func TestRunRejectsVersionArguments(t *testing.T) {
+	t.Parallel()
+
+	for _, args := range [][]string{{"version", "extra"}, {"--version", "extra"}} {
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+		exitCode := Run(t.Context(), args, IO{Stdout: &stdout, Stderr: &stderr}, nil, buildinfo.Info{})
+		want := "papercuts: version: does not accept arguments\n"
+		if exitCode != 2 || stdout.Len() != 0 || stderr.String() != want {
+			t.Errorf("Run(%v) = exit %d, stdout %q, stderr %q; want exit 2, empty stdout, stderr %q", args, exitCode, stdout.String(), stderr.String(), want)
+		}
+	}
+}
+
 func TestRunShowsVersionWithoutOperations(t *testing.T) {
 	t.Parallel()
 

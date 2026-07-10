@@ -42,6 +42,9 @@ func Run(
 	case "-h", "--help":
 		return writeExit(streams.Stdout, 0, "%s", rootHelp())
 	case "version", "--version":
+		if len(args) != 1 {
+			return writeExit(streams.Stderr, 2, "papercuts: version: does not accept arguments\n")
+		}
 		return writeExit(streams.Stdout, 0, "%s\n", build.String())
 	case "capture":
 		return runCapture(ctx, args[1:], streams, service)
