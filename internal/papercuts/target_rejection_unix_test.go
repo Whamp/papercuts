@@ -17,6 +17,15 @@ func TestInitializeLogRejectsNonRegularTargets(t *testing.T) {
 	t.Parallel()
 
 	root := t.TempDir()
+	shortRoot, err := os.MkdirTemp("/tmp", "papercuts-reject-")
+	if err != nil {
+		t.Fatalf("os.MkdirTemp(/tmp) returned error: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := os.RemoveAll(shortRoot); err != nil {
+			t.Errorf("os.RemoveAll(%q) error = %v, want nil", shortRoot, err)
+		}
+	})
 	tests := []struct {
 		name  string
 		path  string
@@ -47,7 +56,7 @@ func TestInitializeLogRejectsNonRegularTargets(t *testing.T) {
 		},
 		{
 			name: "socket",
-			path: filepath.Join(root, "socket"),
+			path: filepath.Join(shortRoot, "socket"),
 			kind: "socket",
 			setup: func(t *testing.T, path string) {
 				t.Helper()
