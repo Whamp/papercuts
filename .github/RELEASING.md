@@ -6,7 +6,7 @@ The canonical release channel is [github.com/Whamp/papercuts/releases](https://g
 
 1. Commit the selected root `LICENSE`; GoReleaser requires it in every archive.
 2. Change the existing `Whamp/papercuts` repository from private to public. Never publish it before the license is committed.
-3. Enable immutable releases in the repository release settings.
+3. Verify immutable releases remain enabled. They were enabled through GitHub's repository API during private bootstrap.
 4. Allow GitHub Actions to create attestations and write release contents.
 5. Keep the workflow permission default read-only. `.github/workflows/release.yml` requests write permissions only for its release job graph.
 

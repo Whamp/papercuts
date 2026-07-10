@@ -10,4 +10,4 @@ Does one implementation specification faithfully assemble every resolved decisio
 
 ## Draft
 
-The assembled [implementation specification](../implementation-specification.md) covers every resolved technical decision and acceptance gate. It remains unapproved because issue 12 has not selected the exact repository and release-archive license.
+The assembled [implementation specification](../implementation-specification.md) covers every resolved technical decision and acceptance gate. Hosted CI run [`29063964488`](https://github.com/Whamp/papercuts/actions/runs/29063964488) supplies native Linux, macOS, and Windows evidence, and immutable releases are enabled for the private repository. The specification remains unapproved only because issue 12 has not selected the exact repository and release-archive license.
