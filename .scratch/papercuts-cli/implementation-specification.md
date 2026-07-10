@@ -377,7 +377,7 @@ Papercuts does not:
 
 ## 12. Approval state
 
-Issues 01–10 supply all technical and product behavior above. The implementation and local validation exist through commit `914523e`. Private repository `Whamp/papercuts` preserves the unpublished history while the license is unresolved. Hosted CI run [`29063964488`](https://github.com/Whamp/papercuts/actions/runs/29063964488) passed formatting, vet, golangci-lint, six-target cross-compilation, and native tests plus race tests on Linux, macOS, and Windows. GitHub's repository API confirms immutable releases are enabled.
+Issues 01–10 supply all technical and product behavior above. The implementation and reviewed local validation exist through commit `0e76a24`. Private repository `Whamp/papercuts` preserves the unpublished history while the license is unresolved. Hosted CI run [`29066692111`](https://github.com/Whamp/papercuts/actions/runs/29066692111) passed formatting, vet, golangci-lint, reachable-vulnerability scanning, checked workflow scripts, exact six-target command/test cross-compilation, and native tests plus race tests on Linux, macOS, and Windows. Isolated tagged builds additionally passed exact snapshot/release archive, checksum-manifest, and distinct-version lifecycle validation. GitHub's repository API confirms immutable releases are enabled.
 
 Issue 12 remains the sole high-level decision: the exact repository and archive license. Until Will selects it, this document remains a draft, issue 11 remains open, release archives cannot satisfy their content contract, and the repository must remain private.
 
