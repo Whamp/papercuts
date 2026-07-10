@@ -30,11 +30,11 @@ A tiny standalone `papercuts` CLI for Linux, macOS, and Windows, accompanied by 
 - [Finalize the Agent-Facing Guidance](issues/08-finalize-agent-guidance.md) — Reviewed canonical AGENTS guidance and CLI help cover capture criteria, severity, scope, multiline input, safe continuation, secrets, and actionable failures without setup or storage detail.
 - [Choose the Distribution and Update Path](issues/09-choose-distribution-path.md) — Immutable, attested GitHub Releases built by GoReleaser are canonical; manual verified binaries lead, `go install` is secondary, and package channels, signing, installers, and self-update are deferred.
 - [Choose the Implementation Architecture](issues/10-choose-implementation-architecture.md) — A three-operation deep application module sits behind the CLI, with target-handle locks and atomic publication/replacement as the only platform seams and explicit indeterminate persistence outcomes.
+- [Choose the Repository License](issues/12-choose-repository-license.md) — Will selected canonical SPDX MIT text with `Copyright (c) 2026 Will Hampson` for the repository and every release archive.
 
 ## Not yet specified
 
-- [Choose the Repository License](issues/12-choose-repository-license.md) — Awaiting Will's exact legal/product choice; MIT is recommended and fully specified.
-- [Draft and Approve the Implementation Specification](issues/11-approve-implementation-specification.md) — The reviewed draft is complete but cannot be approved until the license is selected.
+- [Draft and Approve the Implementation Specification](issues/11-approve-implementation-specification.md) — The reviewed draft now has every product and technical field complete; final approval and public publication remain.
 
 ## Out of scope
 

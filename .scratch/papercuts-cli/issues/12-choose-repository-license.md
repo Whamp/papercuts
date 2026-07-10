@@ -1,7 +1,7 @@
 # Choose the Repository License
 
 Type: grilling
-Status: claimed
+Status: resolved
 Blocked by: 09
 
 ## Question
@@ -30,3 +30,7 @@ Specify a different copyright holder or year with the answer when desired; other
 All work independent of this decision is complete. Reviewed implementation evidence exists through commit `b0b4f70`, including hosted Linux, macOS, and Windows validation. Fresh checks confirmed that the root `LICENSE` is absent, GitHub reports `license: null` and private visibility, and raw human session messages contain no explicit license authorization. A native choice dialog was also attempted, but this headless session has no Wayland display.
 
 Do not infer consent from the MIT recommendation or repeat completed technical audits. Resume only after Will provides one of the answers above. The next steps are to commit the exact `LICENSE`, resolve this issue, approve and resolve issue 11, make the repository public, and run the final completion audit.
+
+## Answer
+
+Will selected `MIT`. The repository and every release archive use the canonical SPDX MIT text with `Copyright (c) 2026 Will Hampson`; the exact text is committed at root [`LICENSE`](../../../LICENSE). No licensing question remains open.

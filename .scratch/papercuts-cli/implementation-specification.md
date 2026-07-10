@@ -1,6 +1,6 @@
 # Papercuts CLI Implementation Specification
 
-Status: draft; approval blocked only by [issue 12](issues/12-choose-repository-license.md)
+Status: draft; MIT license selected; awaiting final approval in [issue 11](issues/11-approve-implementation-specification.md)
 
 ## 1. Purpose
 
@@ -311,7 +311,7 @@ papercuts_<version>_windows_arm64.zip
 checksums.txt
 ```
 
-Every archive contains the executable, `README.md`, and the repository `LICENSE`. The license text cannot be specified or published until issue 12 records Will's legal/product choice. This is the only unresolved specification field.
+Every archive contains the executable, `README.md`, and the repository [`LICENSE`](../../LICENSE): canonical SPDX MIT text with `Copyright (c) 2026 Will Hampson`.
 
 The release workflow must:
 
@@ -379,6 +379,4 @@ Papercuts does not:
 
 Issues 01–10 supply all technical and product behavior above. The implementation and reviewed local validation exist through commit `0e76a24`. Private repository `Whamp/papercuts` preserves the unpublished history while the license is unresolved. Hosted CI run [`29066692111`](https://github.com/Whamp/papercuts/actions/runs/29066692111) passed formatting, vet, golangci-lint, reachable-vulnerability scanning, checked workflow scripts, exact six-target command/test cross-compilation, and native tests plus race tests on Linux, macOS, and Windows. Isolated tagged builds additionally passed exact snapshot/release archive, checksum-manifest, and distinct-version lifecycle validation. GitHub's repository API confirms immutable releases are enabled.
 
-Issue 12 remains the sole high-level decision: the exact repository and archive license. Until Will selects it, this document remains a draft, issue 11 remains open, release archives cannot satisfy their content contract, and the repository must remain private.
-
-After the license decision, approval requires adding its exact text as root `LICENSE`, replacing this draft status with approved status, resolving issues 12 and 11, and making the repository public. No other product or technical question remains open.
+Will selected MIT in issue 12, and the canonical SPDX text is present as root [`LICENSE`](../../LICENSE). The release-archive content contract is complete. This document remains a draft only until issue 11 records final approval and the licensed repository becomes public. No product or technical question remains open.
