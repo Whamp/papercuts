@@ -34,7 +34,7 @@ Do not push a release tag until every setup step is complete.
 
 5. Watch the Release workflow. It:
    - validates the tag and source;
-   - runs actionlint and a pedantic zizmor security audit;
+   - runs actionlint, a pedantic zizmor security audit, and a reachable-code vulnerability scan;
    - runs native tests and race tests on Linux, macOS, and Windows;
    - builds six archives with GoReleaser;
    - inspects archive contents and independently verifies SHA-256 checksums;
