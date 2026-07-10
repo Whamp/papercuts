@@ -1,6 +1,6 @@
 # Papercuts CLI Implementation Specification
 
-Status: draft; MIT license selected; awaiting final approval in [issue 11](issues/11-approve-implementation-specification.md)
+Status: approved in [issue 11](issues/11-approve-implementation-specification.md)
 
 ## 1. Purpose
 
@@ -377,6 +377,6 @@ Papercuts does not:
 
 ## 12. Approval state
 
-Issues 01–10 supply all technical and product behavior above. The implementation and reviewed local validation exist through commit `0e76a24`. Private repository `Whamp/papercuts` preserves the unpublished history while the license is unresolved. Hosted CI run [`29066692111`](https://github.com/Whamp/papercuts/actions/runs/29066692111) passed formatting, vet, golangci-lint, reachable-vulnerability scanning, checked workflow scripts, exact six-target command/test cross-compilation, and native tests plus race tests on Linux, macOS, and Windows. Isolated tagged builds additionally passed exact snapshot/release archive, checksum-manifest, and distinct-version lifecycle validation. GitHub's repository API confirms immutable releases are enabled.
+Issues 01–12 supply all product, technical, licensing, and approval decisions above. The implementation and reviewed validation exist through MIT-license commit `8c7c0a9`. Hosted CI run [`29067405967`](https://github.com/Whamp/papercuts/actions/runs/29067405967) passed formatting, vet, golangci-lint, reachable-vulnerability scanning, checked workflow scripts, exact six-target command/test cross-compilation, and native tests plus race tests on Linux, macOS, and Windows. Isolated tagged builds additionally passed exact snapshot/release archive, checksum-manifest, and distinct-version lifecycle validation.
 
-Will selected MIT in issue 12, and the canonical SPDX text is present as root [`LICENSE`](../../LICENSE). The release-archive content contract is complete. This document remains a draft only until issue 11 records final approval and the licensed repository becomes public. No product or technical question remains open.
+Will selected MIT in issue 12, and the canonical SPDX text is present as root [`LICENSE`](../../LICENSE). `Whamp/papercuts` is public, GitHub detects the MIT license, the immutable-releases repository endpoint returns HTTP 200, and GitHub Actions workflow defaults remain read-only. Issue 11 approves this specification. No product, technical, licensing, publication, or approval question remains open.

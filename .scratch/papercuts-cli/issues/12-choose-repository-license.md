@@ -25,11 +25,9 @@ Answer with one of:
 
 Specify a different copyright holder or year with the answer when desired; otherwise the `MIT` meaning above is complete and requires no follow-up.
 
-## Pause State
+## Decision History
 
-All work independent of this decision is complete. Reviewed implementation evidence exists through commit `b0b4f70`, including hosted Linux, macOS, and Windows validation. Fresh checks confirmed that the root `LICENSE` is absent, GitHub reports `license: null` and private visibility, and raw human session messages contain no explicit license authorization. A native choice dialog was also attempted, but this headless session has no Wayland display.
-
-Do not infer consent from the MIT recommendation or repeat completed technical audits. Resume only after Will provides one of the answers above. The next steps are to commit the exact `LICENSE`, resolve this issue, approve and resolve issue 11, make the repository public, and run the final completion audit.
+Before Will answered, all independent work was complete through commit `b0b4f70`, the repository remained private without a root `LICENSE`, and no raw human session message authorized a license. That evidence justified pausing for this legal/product decision instead of inferring consent from the MIT recommendation.
 
 ## Answer
 
