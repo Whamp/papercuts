@@ -214,9 +214,9 @@ jobs:
     name: Attest and publish
     needs: native-smoke
     permissions:
-      contents: write
-      id-token: write
-      attestations: write
+      contents: write # Create and publish the release and upload its assets.
+      id-token: write # Obtain the OIDC identity used for artifact provenance.
+      attestations: write # Store provenance attestations for release artifacts.
     runs-on: ubuntu-latest
     steps:
       - name: Download validated release build
