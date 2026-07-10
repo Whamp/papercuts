@@ -2,7 +2,7 @@
 
 ## Destination
 
-An implementation-ready specification for a tiny `papercuts` CLI that captures project-scoped or global workflow friction, uses an overridable global location, and can optionally advertise itself in `AGENTS.md`.
+A tiny standalone `papercuts` CLI for Linux, macOS, and Windows, accompanied by an approved implementation specification. It captures project-scoped or global workflow friction, supports an overridable global location, and can optionally advertise itself in `AGENTS.md`.
 
 ## Notes
 
@@ -33,7 +33,8 @@ An implementation-ready specification for a tiny `papercuts` CLI that captures p
 
 ## Not yet specified
 
-<!-- No remaining fog; all currently known questions are represented by tickets. -->
+- [Choose the Repository License](issues/12-choose-repository-license.md) — Awaiting Will's exact legal/product choice; MIT is recommended and fully specified.
+- [Draft and Approve the Implementation Specification](issues/11-approve-implementation-specification.md) — The reviewed draft is complete but cannot be approved until the license is selected.
 
 ## Out of scope
 
@@ -41,4 +42,3 @@ An implementation-ready specification for a tiny `papercuts` CLI that captures p
 - Product bug tracking or feature requests; `PAPERCUTS.md` is not a second issue tracker.
 - Automatic secret detection or redaction.
 - Git-based project discovery, parent-directory traversal, or implicit project-root guessing.
-- Implementing and shipping the CLI during this planning map.
