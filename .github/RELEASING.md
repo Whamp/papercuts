@@ -1,0 +1,59 @@
+# Release Papercuts
+
+The canonical release channel is [github.com/Whamp/papercuts/releases](https://github.com/Whamp/papercuts/releases). GitHub Actions builds each artifact from an annotated repository tag; maintainers do not upload locally built binaries.
+
+## One-time repository setup
+
+1. Create the public `Whamp/papercuts` repository and push the complete history.
+2. Enable immutable releases in the repository release settings.
+3. Allow GitHub Actions to create attestations and write release contents.
+4. Keep the workflow permission default read-only. `.github/workflows/release.yml` requests write permissions only for its release job graph.
+
+The repository must contain its selected `LICENSE` before any release tag is pushed. GoReleaser requires that file in every archive.
+
+## Version contract
+
+- The first stable version is `v0.1.0`.
+- Stable tags use `vMAJOR.MINOR.PATCH`.
+- Prerelease tags use `vMAJOR.MINOR.PATCH-rc.N`, where `N` starts at 1.
+- Never move, delete, or rebuild a published tag.
+- Fix a released defect with a new patch version.
+
+## Publish
+
+1. Confirm the branch passes CI.
+2. Confirm `git status --short` is empty.
+3. Create and push an annotated tag:
+
+   ```sh
+   git tag -a v0.1.0 -m "papercuts v0.1.0"
+   git push origin v0.1.0
+   ```
+
+4. Watch the Release workflow. It:
+   - validates the tag and source;
+   - runs native tests and race tests on Linux, macOS, and Windows;
+   - builds six archives with GoReleaser;
+   - inspects archive contents and independently verifies SHA-256 checksums;
+   - runs install, capture, replacement, rollback, and uninstall smoke tests on all three operating systems;
+   - creates a draft GitHub release;
+   - creates GitHub artifact attestations;
+   - publishes the release only after every gate passes.
+5. Verify the published release:
+
+   ```sh
+   gh release verify v0.1.0 --repo Whamp/papercuts
+   gh attestation verify papercuts_0.1.0_linux_amd64.tar.gz --repo Whamp/papercuts
+   ```
+
+6. Download one archive independently, verify it against `checksums.txt`, extract it, and run `papercuts version`.
+
+A failed run may leave a draft release. Inspect it before retrying. Delete only an unpublished draft and its assets; never replace a published release.
+
+## Roll back
+
+Published artifacts remain available because releases are immutable. To roll back a client, stop Papercuts commands and install a verified archive from the earlier release. Do not retag the earlier commit. User logs are data and remain untouched.
+
+## Platform signing
+
+Initial macOS and Windows archives are unsigned and may trigger Gatekeeper or SmartScreen warnings. Checksums and GitHub attestations do not replace Developer ID or Authenticode signing. Do not tell users to disable platform security. Add signing and notarization only through a reviewed release change with protected credentials.

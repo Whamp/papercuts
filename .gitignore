@@ -1,0 +1,7 @@
+/.cross-compile/
+/.pi-subagents/
+/dist/
+/papercuts
+/papercuts.exe
+*.test
+*.test.exe

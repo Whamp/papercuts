@@ -1,0 +1,259 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate release input
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out complete history
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Validate release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ ! "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.[1-9][0-9]*)?$ ]]; then
+            echo "invalid release tag: $GITHUB_REF_NAME" >&2
+            exit 1
+          fi
+      - name: Check formatting
+        shell: bash
+        run: test -z "$(gofmt -l .)"
+      - name: Vet
+        run: go vet ./...
+      - name: Test
+        run: go test ./...
+      - name: Install golangci-lint
+        run: go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.12.2
+      - name: Lint
+        run: golangci-lint run ./...
+      - name: Install GoReleaser
+        uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
+        with:
+          distribution: goreleaser
+          version: v2.14.1
+          args: check
+
+  native-test:
+    name: Native test (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Check out source
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Test
+        run: go test ./...
+      - name: Race test
+        run: go test -race ./...
+
+  build:
+    name: Build release archives
+    needs: [validate, native-test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out complete history
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+        with:
+          fetch-depth: 0
+      - name: Set up Go
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: Build with GoReleaser
+        uses: goreleaser/goreleaser-action@e435ccd777264be153ace6237001ef4d979d3a7a # v6
+        with:
+          distribution: goreleaser
+          version: v2.14.1
+          args: release --clean --skip=publish
+      - name: Inspect archive contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t archives < <(find dist -maxdepth 1 -type f \( -name '*.tar.gz' -o -name '*.zip' \) | sort)
+          if [[ ${#archives[@]} -ne 6 ]]; then
+            printf 'expected 6 archives, found %d\n' "${#archives[@]}" >&2
+            printf '%s\n' "${archives[@]}" >&2
+            exit 1
+          fi
+          for archive in "${archives[@]}"; do
+            case "$archive" in
+              *.tar.gz) listing=$(tar -tzf "$archive") ;;
+              *.zip) listing=$(unzip -Z1 "$archive") ;;
+            esac
+            grep -qx 'README.md' <<<"$listing"
+            grep -qx 'LICENSE' <<<"$listing"
+            grep -Eq '^papercuts(\.exe)?$' <<<"$listing"
+          done
+      - name: Verify checksums independently
+        shell: bash
+        run: (cd dist && sha256sum --check checksums.txt)
+      - name: Upload release build
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: release-dist
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+
+  native-smoke:
+    name: Native archive smoke (${{ matrix.os }})
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Set up Go for platform detection
+        uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6
+        with:
+          go-version: "1.24.x"
+          cache: false
+      - name: Download release build
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: release-dist
+          path: dist
+      - name: Smoke Unix archive
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          set -euo pipefail
+          goos=$(go env GOOS)
+          goarch=$(go env GOARCH)
+          archive=$(find dist -maxdepth 1 -name "papercuts_*_${goos}_${goarch}.tar.gz" -print -quit)
+          test -n "$archive"
+          mkdir smoke
+          tar -xzf "$archive" -C smoke
+          ./smoke/papercuts version | grep -F "papercuts $GITHUB_REF_NAME"
+          install_dir=$(mktemp -d)
+          install -m 0755 ./smoke/papercuts "$install_dir/papercuts"
+          "$install_dir/papercuts" version | grep -F "papercuts $GITHUB_REF_NAME"
+          project=$(mktemp -d)
+          cd "$project"
+          "$install_dir/papercuts" init --no-agents
+          "$install_dir/papercuts" capture --severity low "release smoke test"
+          grep -F '> release smoke test' PAPERCUTS.md
+          cp "$install_dir/papercuts" "$install_dir/papercuts.rollback"
+          cp "$GITHUB_WORKSPACE/smoke/papercuts" "$install_dir/papercuts"
+          "$install_dir/papercuts" version | grep -F "papercuts $GITHUB_REF_NAME"
+          mv "$install_dir/papercuts.rollback" "$install_dir/papercuts"
+          "$install_dir/papercuts" version | grep -F "papercuts $GITHUB_REF_NAME"
+          rm "$install_dir/papercuts"
+          test ! -e "$install_dir/papercuts"
+          grep -F '> release smoke test' PAPERCUTS.md
+      - name: Smoke Windows archive
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $arch = go env GOARCH
+          $archive = Get-ChildItem "dist/papercuts_*_windows_${arch}.zip" | Select-Object -First 1
+          if (-not $archive) { throw "Windows archive not found for $arch" }
+          Expand-Archive -Path $archive.FullName -DestinationPath smoke
+          $version = & .\smoke\papercuts.exe version
+          if ($version -notlike "papercuts $env:GITHUB_REF_NAME*") { throw "wrong version: $version" }
+          $installDir = Join-Path $env:RUNNER_TEMP "papercuts-bin"
+          New-Item -ItemType Directory -Force -Path $installDir | Out-Null
+          $installed = Join-Path $installDir "papercuts.exe"
+          Copy-Item .\smoke\papercuts.exe $installed
+          $version = & $installed version
+          if ($version -notlike "papercuts $env:GITHUB_REF_NAME*") { throw "installed wrong version: $version" }
+          $project = Join-Path $env:RUNNER_TEMP "papercuts-smoke"
+          New-Item -ItemType Directory -Force -Path $project | Out-Null
+          Push-Location $project
+          & $installed init --no-agents
+          & $installed capture --severity low "release smoke test"
+          Select-String -Path PAPERCUTS.md -SimpleMatch '> release smoke test'
+          $rollback = Join-Path $installDir "papercuts.rollback.exe"
+          Copy-Item $installed $rollback
+          Copy-Item -Force "$env:GITHUB_WORKSPACE\smoke\papercuts.exe" $installed
+          $version = & $installed version
+          if ($version -notlike "papercuts $env:GITHUB_REF_NAME*") { throw "upgrade failed: $version" }
+          Move-Item -Force $rollback $installed
+          $version = & $installed version
+          if ($version -notlike "papercuts $env:GITHUB_REF_NAME*") { throw "rollback failed: $version" }
+          Remove-Item $installed
+          if (Test-Path $installed) { throw "uninstall failed" }
+          Select-String -Path PAPERCUTS.md -SimpleMatch '> release smoke test'
+          Pop-Location
+
+  publish:
+    name: Attest and publish
+    needs: native-smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download validated release build
+        uses: actions/download-artifact@634f93cb2916e3fdff6788551b99b062d0335ce0 # v5
+        with:
+          name: release-dist
+          path: dist
+      - name: Refuse to replace an existing release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "release $GITHUB_REF_NAME already exists; published versions are immutable" >&2
+            exit 1
+          fi
+      - name: Create draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          args=(release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --verify-tag --draft --generate-notes --title "$GITHUB_REF_NAME")
+          if [[ "$GITHUB_REF_NAME" == *-rc.* ]]; then
+            args+=(--prerelease --latest=false)
+          else
+            args+=(--latest=false)
+          fi
+          gh "${args[@]}" dist/*.tar.gz dist/*.zip dist/checksums.txt
+      - name: Attest release artifacts
+        uses: actions/attest-build-provenance@977bb373ede98d70efdf65b84cb5f73e068dcc2a # v3
+        with:
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/checksums.txt
+      - name: Publish immutable candidate
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF_NAME" == *-rc.* ]]; then
+            gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false --prerelease --latest=false
+          else
+            gh release edit "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --draft=false --latest
+          fi

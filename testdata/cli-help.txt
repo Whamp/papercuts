@@ -1,0 +1,91 @@
+$ papercuts --help
+Record workflow friction encountered while doing other work.
+
+Usage:
+  papercuts <command> [options]
+
+Commands:
+  capture  Append one papercut to a project or global log
+  init     Initialize a log and optionally add AGENTS.md guidance
+  version  Show the version
+
+Options:
+  -h, --help  Show help
+  --version   Show the version
+
+Run `papercuts <command> --help` for command options.
+
+$ papercuts capture --help
+Append one papercut to a project or global log. Project scope is the default.
+
+Usage:
+  papercuts capture --severity <low|medium|high> [options] <description>
+  papercuts capture --severity <low|medium|high> [options] --stdin
+
+Severity:
+  low     Avoidable detour; approach and confidence remained intact
+  medium  Meaningful rework, retries, workaround, changed approach, or reduced confidence
+  high    Blocked work, required intervention, or credible risk of a wrong, destructive, or insecure result
+
+Options:
+  --severity <level>    Required severity: low, medium, or high
+  --project             Write to ./PAPERCUTS.md (default)
+  --global              Write to the global log
+  --global-path <path>  Override the global log; requires --global
+  --reporter <label>    Attach a reporter label
+  --model <label>       Attach a model label
+  --stdin               Read the complete description from standard input
+  -h, --help            Show help
+
+Environment:
+  PAPERCUTS_GLOBAL_PATH  Global log override used when --global-path is absent
+
+$ papercuts init --help
+Initialize a project or global Papercuts log. Project scope is the default.
+
+Usage:
+  papercuts init [options]
+
+Options:
+  --project             Initialize ./PAPERCUTS.md (default)
+  --global              Initialize the global log
+  --global-path <path>  Override the global log; requires --global
+  --agents              Create or update ./AGENTS.md guidance
+  --no-agents           Leave AGENTS.md unchanged and do not prompt
+  -h, --help            Show help
+
+Without --agents or --no-agents, a terminal session asks before changing AGENTS.md. Non-terminal execution leaves AGENTS.md unchanged.
+
+Environment:
+  PAPERCUTS_GLOBAL_PATH  Global log override used when --global-path is absent
+
+$ papercuts version
+papercuts v0.1.0 (commit 1a2b3c4, built 2026-07-09T12:00:00Z)
+
+# Canonical success output
+Captured <severity> <project|global> papercut in <path>
+Initialized <project|global> papercuts log at <path>
+<project|global> papercuts log already exists at <path>
+Created Papercuts guidance in <path>
+Updated Papercuts guidance in <path>
+Papercuts guidance is already current in <path>
+Skipped AGENTS.md integration
+
+# Canonical diagnostics
+papercuts: unknown command "<command>"; run `papercuts --help`
+papercuts: capture: --severity is required; choose low, medium, or high
+papercuts: capture: invalid severity "<value>"; choose low, medium, or high
+papercuts: capture: provide one description argument or --stdin
+papercuts: capture: provide either one description argument or --stdin, not both
+papercuts: capture: description is empty after trimming
+papercuts: capture: --project and --global cannot be used together
+papercuts: capture: --global-path requires --global
+papercuts: capture: global path must be absolute: "<path>"
+papercuts: capture: project log not found at "<path>"; run `papercuts init --project` in that directory
+papercuts: capture: global log not found at "<path>"; run `papercuts init --global`
+papercuts: capture: timed out after 5s waiting to write "<path>"
+papercuts: capture: cannot append to "<path>": <operating-system error>
+papercuts: capture: append to "<path>" may be incomplete; inspect the log before retrying: <operating-system error>
+papercuts: init: --agents and --no-agents cannot be used together
+papercuts: init: cannot use "<path>" as a log: expected a regular file, not <kind>
+papercuts: init: Papercuts markers in "<path>" are malformed; log initialized at "<log-path>"; AGENTS.md unchanged
