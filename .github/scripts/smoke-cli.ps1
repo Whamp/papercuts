@@ -23,7 +23,8 @@ try {
     try {
         $recovery = & $binaryPath capture --severity low 'recovery smoke' 2>&1
         Assert-ExitCode 1 'capture before project initialization'
-        if (($recovery -join "`n") -notlike '*run `papercuts init --project`*') {
+        $recoveryText = $recovery -join "`n"
+        if (-not $recoveryText.Contains('run `papercuts init --project`')) {
             throw "project recovery command missing: $recovery"
         }
         & $binaryPath init --no-agents
@@ -41,7 +42,8 @@ try {
     $globalLog = Join-Path $root 'global\PAPERCUTS.md'
     $globalRecovery = & $binaryPath capture --global --global-path $globalLog --severity low 'global recovery smoke' 2>&1
     Assert-ExitCode 1 'capture before global initialization'
-    if (($globalRecovery -join "`n") -notlike '*papercuts init --global --global-path*') {
+    $globalRecoveryText = $globalRecovery -join "`n"
+    if (-not $globalRecoveryText.Contains('papercuts init --global --global-path')) {
         throw "global recovery command missing: $globalRecovery"
     }
     & $binaryPath init --global --global-path $globalLog --no-agents
