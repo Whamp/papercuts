@@ -23,69 +23,43 @@ Review the accumulated observations in `PAPERCUTS.md`. Each entry includes a UTC
 
 ## Install
 
-Tagged releases publish standalone archives on [GitHub Releases](https://github.com/Whamp/papercuts/releases) for Linux, macOS, and Windows on `amd64` and `arm64`. Each release includes six archives and `checksums.txt`. Each archive contains `README.md`, `LICENSE`, and the platform executable.
-
-### Linux
-
-This example installs `v0.1.0` for `amd64` into `~/.local/bin`:
+### Linux and macOS
 
 ```sh
-version=0.1.0
-archive="papercuts_${version}_linux_amd64.tar.gz"
-base="https://github.com/Whamp/papercuts/releases/download/v${version}"
-curl --fail --location --remote-name "$base/$archive"
-curl --fail --location --remote-name "$base/checksums.txt"
-grep "  $archive\$" checksums.txt | sha256sum --check -
-tar -xzf "$archive"
-mkdir -p "$HOME/.local/bin"
-install -m 0755 papercuts "$HOME/.local/bin/papercuts"
-"$HOME/.local/bin/papercuts" version
+curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location https://raw.githubusercontent.com/Whamp/papercuts/master/install.sh | sh
 ```
 
-Replace `amd64` with `arm64` on ARM Linux.
+The installer detects the operating system and architecture, verifies the release checksum, and installs the latest stable version to `~/.local/bin`. When that directory is not on `PATH`, it prints the command needed for the current shell.
 
-### macOS
-
-This example installs `v0.1.0` for Apple silicon into `~/.local/bin`:
+To install a specific version:
 
 ```sh
-version=0.1.0
-archive="papercuts_${version}_darwin_arm64.tar.gz"
-base="https://github.com/Whamp/papercuts/releases/download/v${version}"
-curl --fail --location --remote-name "$base/$archive"
-curl --fail --location --remote-name "$base/checksums.txt"
-grep "  $archive\$" checksums.txt | shasum --algorithm 256 --check
-tar -xzf "$archive"
-mkdir -p "$HOME/.local/bin"
-install -m 0755 papercuts "$HOME/.local/bin/papercuts"
-"$HOME/.local/bin/papercuts" version
+curl --proto '=https' --tlsv1.2 --fail --silent --show-error --location https://raw.githubusercontent.com/Whamp/papercuts/master/install.sh | PAPERCUTS_VERSION=v0.1.0 sh
 ```
-
-Replace `arm64` with `amd64` on an Intel Mac.
 
 ### Windows
 
-This PowerShell example installs `v0.1.0` for `amd64` into `$HOME\bin`:
+Run in PowerShell:
 
 ```powershell
-$version = "0.1.0"
-$archive = "papercuts_${version}_windows_amd64.zip"
-$base = "https://github.com/Whamp/papercuts/releases/download/v${version}"
-Invoke-WebRequest "$base/$archive" -OutFile $archive
-Invoke-WebRequest "$base/checksums.txt" -OutFile checksums.txt
-$expected = ((Select-String -Path checksums.txt -Pattern ([regex]::Escape($archive))).Line -split '\s+')[0]
-$actual = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
-if ($actual -ne $expected.ToLowerInvariant()) { throw "checksum mismatch" }
-Expand-Archive -Path $archive -DestinationPath papercuts-release
-$bin = Join-Path $HOME "bin"
-New-Item -ItemType Directory -Force -Path $bin | Out-Null
-Move-Item -Force papercuts-release\papercuts.exe $bin\papercuts.exe
-& $bin\papercuts.exe version
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; irm https://raw.githubusercontent.com/Whamp/papercuts/master/install.ps1 | iex
 ```
 
-Replace `amd64` with `arm64` on Windows ARM. Add `$HOME\bin` to the user `PATH` when needed.
+The installer verifies the release checksum and installs the latest stable version to `$HOME\bin`. When that directory is not on the user `PATH`, it prints a command that adds it.
 
-GitHub CLI users can also verify release provenance:
+To install a specific version:
+
+```powershell
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $env:PAPERCUTS_VERSION = 'v0.1.0'; irm https://raw.githubusercontent.com/Whamp/papercuts/master/install.ps1 | iex
+```
+
+Rerun the installer to upgrade, or set `PAPERCUTS_VERSION` to install or restore a specific release. Set `PAPERCUTS_INSTALL_DIR` to override the installation directory. The installers do not modify shell profiles or `PATH`.
+
+### Alternative installation methods
+
+Download a platform archive and `checksums.txt` from [GitHub Releases](https://github.com/Whamp/papercuts/releases) for a fully manual installation. Verify the selected archive with `sha256sum` on Linux, `shasum --algorithm 256` on macOS, or `Get-FileHash -Algorithm SHA256` on Windows before extracting and copying the executable to a directory on `PATH`.
+
+GitHub CLI users can additionally verify release provenance:
 
 ```sh
 gh attestation verify papercuts_0.1.0_linux_amd64.tar.gz --repo Whamp/papercuts
@@ -93,9 +67,7 @@ gh attestation verify papercuts_0.1.0_linux_amd64.tar.gz --repo Whamp/papercuts
 
 Initial macOS and Windows binaries are unsigned, so Gatekeeper or SmartScreen may warn. Checksums and GitHub attestations verify artifact integrity and provenance; they do not replace Apple Developer ID or Microsoft Authenticode signing. Do not disable platform security globally to run Papercuts.
 
-### Go install
-
-Developers with Go 1.24 or newer can install a pinned version:
+Developers with Go 1.24 or newer can install a pinned version directly:
 
 ```sh
 go install github.com/Whamp/papercuts/cmd/papercuts@v0.1.0
@@ -173,7 +145,7 @@ Papercuts targets local filesystems on Linux, macOS, and Windows. Locking and du
 
 ## Upgrade, rollback, and uninstall
 
-Stop running Papercuts commands, verify the desired archive, and replace the executable to upgrade or roll back. Published versions are immutable; install an earlier named release to roll back.
+Stop running Papercuts commands, then rerun the installer to upgrade. Set `PAPERCUTS_VERSION` to a previously published version to roll back. The installer verifies the selected archive before replacing the executable, and published versions are immutable.
 
 To uninstall, delete the executable. Papercuts leaves project and global logs in place. Delete those logs separately only when you intend to delete their contents.
 

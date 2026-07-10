@@ -36,7 +36,7 @@ jobs:
         run: |
           go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.11
           "$(go env GOPATH)/bin/actionlint"
-          shellcheck .github/scripts/*.sh
+          shellcheck install.sh .github/scripts/*.sh
           .github/scripts/check-workflow-toolchains.sh
           .github/scripts/test-release-scripts.sh
       - name: Audit workflows
@@ -77,6 +77,14 @@ jobs:
         run: go test ./...
       - name: Race test
         run: go test -race ./...
+      - name: Test installer (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: .github/scripts/test-install.sh
+      - name: Test installer (Windows PowerShell 5.1)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: .github/scripts/test-install.ps1
       - name: Build and smoke executable (Unix)
         if: runner.os != 'Windows'
         shell: bash
