@@ -79,7 +79,13 @@ func (s *Service) IntegrateGuidance(ctx context.Context, request GuidanceRequest
 
 func createGuidance(path string) (GuidanceResult, error) {
 	result := GuidanceResult{Path: path, State: GuidanceNotPerformed, Effect: EffectUnchanged}
-	temporaryPath, err := writeSyncedTemporary(path, ".papercuts-agents-*", managedSection(), 0o644)
+	temporaryPath, err := writeSyncedTemporary(
+		path,
+		".papercuts-agents-*",
+		managedSection(),
+		0o644,
+		temporaryModeRespectUmask,
+	)
 	if err != nil {
 		return result, guidanceOperationError(path, EffectUnchanged, err)
 	}
@@ -153,7 +159,13 @@ func reconcileGuidance(ctx context.Context, path string, before fs.FileInfo) (Gu
 	}
 
 	preservedMode := fileInfo.Mode() & (os.ModePerm | os.ModeSetuid | os.ModeSetgid | os.ModeSticky)
-	temporaryPath, err := writeSyncedTemporary(path, ".papercuts-agents-*", merged, preservedMode)
+	temporaryPath, err := writeSyncedTemporary(
+		path,
+		".papercuts-agents-*",
+		merged,
+		preservedMode,
+		temporaryModeExact,
+	)
 	if err != nil {
 		return result, guidanceOperationError(path, EffectUnchanged, errors.Join(err, finishLocked(file)))
 	}

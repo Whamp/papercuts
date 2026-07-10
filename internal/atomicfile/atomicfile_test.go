@@ -16,7 +16,7 @@ func TestCommittedIdentifiesPostPublicationFailure(t *testing.T) {
 		t.Error("Committed() = false, want true")
 	}
 	if !errors.Is(err, underlying) {
-		t.Errorf("errors.Is(committed error, underlying) = false")
+		t.Errorf("errors.Is(CommittedError, underlying) = false, want true")
 	}
 	if Committed(underlying) {
 		t.Error("Committed(uncommitted error) = true, want false")
@@ -43,7 +43,7 @@ func TestReplaceAtomicallyPublishesCompleteTemporaryFile(t *testing.T) {
 		t.Fatalf("os.ReadFile(target) returned error: %v", err)
 	}
 	if string(content) != "complete replacement" {
-		t.Errorf("target content = %q", content)
+		t.Errorf("Replace() target content = %q, want %q", content, "complete replacement")
 	}
 	if _, err := os.Lstat(temporary); !errors.Is(err, os.ErrNotExist) {
 		t.Errorf("os.Lstat(temporary) error = %v, want not exist", err)

@@ -67,14 +67,15 @@ func TestRunCapturesOneProjectPapercut(t *testing.T) {
 	if exitCode != 0 {
 		t.Errorf("Run() exit code = %d, want 0", exitCode)
 	}
-	if stdout.String() != "Captured medium project papercut in /work/PAPERCUTS.md\n" {
-		t.Errorf("Run() stdout = %q", stdout.String())
+	wantStdout := "Captured medium project papercut in /work/PAPERCUTS.md\n"
+	if stdout.String() != wantStdout {
+		t.Errorf("Run(capture project) stdout = %q, want %q", stdout.String(), wantStdout)
 	}
 	if stderr.Len() != 0 {
 		t.Errorf("Run() stderr = %q, want empty", stderr.String())
 	}
 	if operations.captureRequest.Description != "The test command required an undocumented working directory." || operations.captureRequest.Severity.String() != "medium" {
-		t.Errorf("Capture() request = %#v", operations.captureRequest)
+		t.Errorf("Capture() request = %#v, want medium request with reviewed project description", operations.captureRequest)
 	}
 }
 
@@ -105,14 +106,23 @@ func TestRunReadsMultilineInputOnlyWithExplicitStdin(t *testing.T) {
 	if exitCode != 0 {
 		t.Errorf("Run() exit code = %d, want 0; stderr = %q", exitCode, stderr.String())
 	}
-	if operations.captureRequest.Description != "The first command failed.\nThe task is blocked.\n" {
-		t.Errorf("Capture() description = %q", operations.captureRequest.Description)
+	wantDescription := "The first command failed.\nThe task is blocked.\n"
+	if operations.captureRequest.Description != wantDescription {
+		t.Errorf("Capture(stdin) description = %q, want %q", operations.captureRequest.Description, wantDescription)
 	}
 	if !operations.captureRequest.Target.Global || operations.captureRequest.Target.GlobalPath == nil || *operations.captureRequest.Target.GlobalPath != "/var/papercuts.md" {
-		t.Errorf("Capture() target = %#v", operations.captureRequest.Target)
+		t.Errorf("Capture(stdin) target = %#v, want global path %q", operations.captureRequest.Target, "/var/papercuts.md")
 	}
 	if operations.captureRequest.Reporter == nil || *operations.captureRequest.Reporter != "agent" || operations.captureRequest.Model == nil || *operations.captureRequest.Model != "gpt-5-codex" {
-		t.Errorf("Capture() attribution = reporter %v, model %v", operations.captureRequest.Reporter, operations.captureRequest.Model)
+		gotReporter := "<nil>"
+		if operations.captureRequest.Reporter != nil {
+			gotReporter = *operations.captureRequest.Reporter
+		}
+		gotModel := "<nil>"
+		if operations.captureRequest.Model != nil {
+			gotModel = *operations.captureRequest.Model
+		}
+		t.Errorf("Capture(stdin) attribution = reporter %q, model %q; want reporter %q, model %q", gotReporter, gotModel, "agent", "gpt-5-codex")
 	}
 }
 
@@ -142,7 +152,7 @@ func TestRunInitNonInteractiveSkipsGuidanceWithoutReadingStdin(t *testing.T) {
 		t.Errorf("Run() stdout = %q, want %q", stdout.String(), want)
 	}
 	if operations.initializeCalls != 1 || operations.guidanceCalls != 0 {
-		t.Errorf("operation calls = initialize %d, guidance %d", operations.initializeCalls, operations.guidanceCalls)
+		t.Errorf("Run(non-interactive init) calls = initialize %d, guidance %d; want initialize 1, guidance 0", operations.initializeCalls, operations.guidanceCalls)
 	}
 }
 
@@ -217,7 +227,7 @@ func TestRunReportsMalformedGuidanceAfterDurableLogInit(t *testing.T) {
 	wantOut := "Initialized project papercuts log at /work/PAPERCUTS.md\n"
 	wantErr := "papercuts: init: Papercuts markers in \"/work/AGENTS.md\" are malformed; log initialized at \"/work/PAPERCUTS.md\"; AGENTS.md unchanged\n"
 	if exitCode != 1 || stdout.String() != wantOut || stderr.String() != wantErr {
-		t.Errorf("Run() = exit %d, stdout %q, stderr %q", exitCode, stdout.String(), stderr.String())
+		t.Errorf("Run(malformed guidance) = exit %d, stdout %q, stderr %q; want exit 1, stdout %q, stderr %q", exitCode, stdout.String(), stderr.String(), wantOut, wantErr)
 	}
 }
 
@@ -300,7 +310,7 @@ func TestRunShowsVersionWithoutOperations(t *testing.T) {
 			Stderr: &stderr,
 		}, nil, buildinfo.Info{Version: "v0.1.0", Commit: "1a2b3c4", BuildDate: "2026-07-09T12:00:00Z"})
 		if exitCode != 0 || stderr.Len() != 0 {
-			t.Errorf("Run(%v) = exit %d, stderr %q", args, exitCode, stderr.String())
+			t.Errorf("Run(%v) = exit %d, stderr %q; want exit 0 and empty stderr", args, exitCode, stderr.String())
 		}
 		want := "papercuts v0.1.0 (commit 1a2b3c4, built 2026-07-09T12:00:00Z)\n"
 		if stdout.String() != want {

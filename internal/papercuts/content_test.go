@@ -48,7 +48,7 @@ func TestPrepareEntryReportsTrimmedEmptyDescription(t *testing.T) {
 		t.Fatalf("prepareEntry() error = %v, want ValidationError", err)
 	}
 	if validationError.Field != "description" || validationError.Reason != "is empty after trimming" {
-		t.Errorf("prepareEntry() error = %#v", validationError)
+		t.Errorf("prepareEntry(trimmed-empty description) ValidationError = %#v, want field %q and reason %q", validationError, "description", "is empty after trimming")
 	}
 }
 

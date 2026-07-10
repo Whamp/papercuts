@@ -28,11 +28,11 @@ func TestInitializeGlobalCreatesPrivateDirectoriesAndLog(t *testing.T) {
 			t.Fatalf("os.Stat(%q) returned error: %v", createdPath, statErr)
 		}
 		if got := info.Mode().Perm() & 0o077; got != 0 {
-			t.Errorf("%s grants group/other permissions %o", createdPath, got)
+			t.Errorf("InitializeLog() group/other mode for %q = %o, want 0", createdPath, got)
 		}
 	}
 	if result.Scope != GlobalScope || result.Effect != EffectDurable {
-		t.Errorf("InitializeLog() = %#v", result)
+		t.Errorf("InitializeLog(global) = %#v, want scope %v and effect %v", result, GlobalScope, EffectDurable)
 	}
 }
 

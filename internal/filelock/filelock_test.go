@@ -27,10 +27,10 @@ func TestOpenTimesOutThroughHardLinkAlias(t *testing.T) {
 	}
 	defer func() {
 		if err := first.Unlock(); err != nil {
-			t.Errorf("first.Unlock() returned error: %v", err)
+			t.Errorf("first.Unlock() error = %v, want nil", err)
 		}
 		if err := first.Close(); err != nil {
-			t.Errorf("first.Close() returned error: %v", err)
+			t.Errorf("first.Close() error = %v, want nil", err)
 		}
 	}()
 
@@ -55,10 +55,10 @@ func TestOpenStopsWhenCallerCancels(t *testing.T) {
 	}
 	defer func() {
 		if err := first.Unlock(); err != nil {
-			t.Errorf("first.Unlock() returned error: %v", err)
+			t.Errorf("first.Unlock() error = %v, want nil", err)
 		}
 		if err := first.Close(); err != nil {
-			t.Errorf("first.Close() returned error: %v", err)
+			t.Errorf("first.Close() error = %v, want nil", err)
 		}
 	}()
 
@@ -88,10 +88,10 @@ func TestOpenTimesOutWhenTargetIsLocked(t *testing.T) {
 	}
 	defer func() {
 		if err := first.Unlock(); err != nil {
-			t.Errorf("first.Unlock() returned error: %v", err)
+			t.Errorf("first.Unlock() error = %v, want nil", err)
 		}
 		if err := first.Close(); err != nil {
-			t.Errorf("first.Close() returned error: %v", err)
+			t.Errorf("first.Close() error = %v, want nil", err)
 		}
 	}()
 

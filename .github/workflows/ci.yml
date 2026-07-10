@@ -38,6 +38,7 @@ jobs:
           "$(go env GOPATH)/bin/actionlint"
           shellcheck .github/scripts/*.sh
           .github/scripts/check-workflow-toolchains.sh
+          .github/scripts/test-release-scripts.sh
       - name: Audit workflows
         uses: zizmorcore/zizmor-action@192e21d79ab29983730a13d1382995c2307fbcaa # v0.5.7
         with:
@@ -76,6 +77,20 @@ jobs:
         run: go test ./...
       - name: Race test
         run: go test -race ./...
+      - name: Build and smoke executable (Unix)
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          binary="$RUNNER_TEMP/papercuts"
+          go build -o "$binary" ./cmd/papercuts
+          .github/scripts/smoke-cli.sh "$binary"
+      - name: Build and smoke executable (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $binary = Join-Path $env:RUNNER_TEMP 'papercuts.exe'
+          go build -o $binary ./cmd/papercuts
+          & .github/scripts/smoke-cli.ps1 -Binary $binary
 
   cross-compile:
     name: Cross-compile

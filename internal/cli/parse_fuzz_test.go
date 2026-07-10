@@ -16,16 +16,16 @@ func FuzzParseCapturePreservesCommandInvariants(f *testing.F) {
 			return
 		}
 		if command.severity.String() == "" {
-			t.Error("parseCapture() accepted an invalid severity")
+			t.Errorf("parseCapture(%q) severity = empty, want a valid severity after success", args)
 		}
 		if command.target.Project && command.target.Global {
-			t.Error("parseCapture() accepted conflicting scopes")
+			t.Errorf("parseCapture(%q) target = %#v, want mutually exclusive scopes", args, command.target)
 		}
 		if command.target.GlobalPath != nil && !command.target.Global {
-			t.Error("parseCapture() accepted global path without global scope")
+			t.Errorf("parseCapture(%q) target = %#v, want global scope with global path", args, command.target)
 		}
 		if command.stdin && command.description != "" {
-			t.Errorf("parseCapture() accepted stdin with an argument description: %#v", command)
+			t.Errorf("parseCapture(%q) command = %#v, want empty argument description with stdin", args, command)
 		}
 	})
 }

@@ -33,12 +33,14 @@ func TestParseCaptureRejectsAmbiguousInputs(t *testing.T) {
 func TestParseCaptureDoubleDashAllowsOptionShapedDescription(t *testing.T) {
 	t.Parallel()
 
-	got, err := parseCapture([]string{"--severity", "low", "--", "--unexpected-tool-flag"})
+	args := []string{"--severity", "low", "--", "--unexpected-tool-flag"}
+	got, err := parseCapture(args)
 	if err != nil {
-		t.Fatalf("parseCapture() returned error: %v", err)
+		t.Fatalf("parseCapture(%v) returned error: %v", args, err)
 	}
-	if got.description != "--unexpected-tool-flag" {
-		t.Errorf("parseCapture() description = %q", got.description)
+	want := "--unexpected-tool-flag"
+	if got.description != want {
+		t.Errorf("parseCapture(%v) description = %q, want %q", args, got.description, want)
 	}
 }
 

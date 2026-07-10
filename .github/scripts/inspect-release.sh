@@ -5,6 +5,9 @@ set -euo pipefail
 dist_dir=${1:-dist}
 metadata_file="$dist_dir/metadata.json"
 checksum_file="$dist_dir/checksums.txt"
+repository_root=$(git rev-parse --show-toplevel)
+extracted=$(mktemp -d)
+trap 'rm -rf "$extracted"' EXIT
 
 version=$(jq -er '.version | select(type == "string" and length > 0)' "$metadata_file")
 expected_names=(
@@ -38,10 +41,14 @@ for archive in "${archives[@]}"; do
     *.tar.gz)
       listing=$(tar -tzf "$archive" | sort)
       executable=papercuts
+      tar -xOzf "$archive" LICENSE >"$extracted/LICENSE"
+      tar -xOzf "$archive" README.md >"$extracted/README.md"
       ;;
     *.zip)
       listing=$(unzip -Z1 "$archive" | sort)
       executable=papercuts.exe
+      unzip -p "$archive" LICENSE >"$extracted/LICENSE"
+      unzip -p "$archive" README.md >"$extracted/README.md"
       ;;
   esac
   expected=$(printf '%s\n' LICENSE README.md "$executable" | sort)
@@ -49,6 +56,12 @@ for archive in "${archives[@]}"; do
     printf 'unexpected contents in %s:\n%s\n' "$archive" "$listing" >&2
     exit 1
   fi
+  for source_file in LICENSE README.md; do
+    if ! cmp -s "$repository_root/$source_file" "$extracted/$source_file"; then
+      printf '%s in %s does not match the checked-out source file\n' "$source_file" "$archive" >&2
+      exit 1
+    fi
+  done
 done
 
 (

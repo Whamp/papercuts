@@ -19,13 +19,13 @@ func FuzzRenderedDescriptionCannotCreateEntryBoundary(f *testing.F) {
 		}
 		rendered, err := renderEntry(prepared)
 		if err != nil {
-			t.Fatalf("renderEntry() returned error after prepareEntry() succeeded: %v", err)
+			t.Fatalf("renderEntry(description=%q) error = %v, want nil after successful preparation", description, err)
 		}
 		if !bytes.HasPrefix(rendered, []byte("\n## ")) || !bytes.HasSuffix(rendered, []byte("\n")) {
-			t.Errorf("renderEntry() framing = %q", rendered)
+			t.Errorf("renderEntry(description=%q) framing = %q, want leading entry heading and trailing newline", description, rendered)
 		}
 		if got := bytes.Count(rendered, []byte("\n## ")); got != 1 {
-			t.Errorf("renderEntry() emitted %d entry boundaries for one description\n%q", got, rendered)
+			t.Errorf("renderEntry(description=%q) boundary count = %d, want 1\nrendered: %q", description, got, rendered)
 		}
 	})
 }

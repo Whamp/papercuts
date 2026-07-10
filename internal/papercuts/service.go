@@ -76,8 +76,9 @@ func (e *OperationError) Unwrap() error {
 
 // Service performs complete papercuts filesystem transactions.
 type Service struct {
-	sources systemSources
-	now     func() time.Time
+	sources            systemSources
+	now                func() time.Time
+	capturePersistence capturePersistence
 }
 
 // NewService returns a service wired to the operating system.
@@ -86,7 +87,11 @@ func NewService() *Service {
 }
 
 func newService(sources systemSources, now func() time.Time) *Service {
-	return &Service{sources: sources, now: now}
+	return &Service{
+		sources:            sources,
+		now:                now,
+		capturePersistence: defaultCapturePersistence(),
+	}
 }
 
 func operationError(operation string, target resolvedTarget, effect Effect, err error) error {

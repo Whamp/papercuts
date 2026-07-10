@@ -1,12 +1,15 @@
 package papercuts
 
 import (
+	"context"
 	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/Whamp/papercuts/internal/filelock"
 )
 
 func TestResolveTargetUsesGlobalPrecedence(t *testing.T) {
@@ -60,14 +63,43 @@ func TestInitializeLogIsIdempotentAndPreservesExistingBytes(t *testing.T) {
 		t.Fatalf("InitializeLog(second) returned error: %v", err)
 	}
 	if second.State != InitializeAlreadyExists || second.Effect != EffectUnchanged {
-		t.Errorf("InitializeLog(second) = %#v", second)
+		t.Errorf("InitializeLog(second) = %#v, want state %v and effect %v", second, InitializeAlreadyExists, EffectUnchanged)
 	}
 	content, err := os.ReadFile(first.Path)
 	if err != nil {
 		t.Fatalf("os.ReadFile() returned error: %v", err)
 	}
 	if string(content) != "custom bytes" {
-		t.Errorf("existing bytes = %q, want preserved", content)
+		t.Errorf("InitializeLog(second) bytes = %q, want %q", content, "custom bytes")
+	}
+}
+
+func TestInitializeLogWaitsForExistingTargetLock(t *testing.T) {
+	t.Parallel()
+
+	directory := t.TempDir()
+	path := filepath.Join(directory, "PAPERCUTS.md")
+	if err := os.WriteFile(path, []byte(logHeader), 0o600); err != nil {
+		t.Fatalf("os.WriteFile(%q) returned error: %v", path, err)
+	}
+	holder, err := filelock.Open(t.Context(), path, time.Millisecond)
+	if err != nil {
+		t.Fatalf("filelock.Open(%q) returned error: %v", path, err)
+	}
+	t.Cleanup(func() {
+		if err := errors.Join(holder.Unlock(), holder.Close()); err != nil {
+			t.Errorf("release held lock for %q: %v", path, err)
+		}
+	})
+
+	ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+	defer cancel()
+	got, err := serviceForDirectory(directory, time.Now).InitializeLog(ctx, InitializeRequest{})
+	if !errors.Is(err, context.DeadlineExceeded) {
+		t.Errorf("InitializeLog() error = %v, want context deadline exceeded while target is locked", err)
+	}
+	if got.State != InitializeNotPerformed || got.Effect != EffectUnchanged {
+		t.Errorf("InitializeLog() = %#v, want unchanged not-performed result", got)
 	}
 }
 
@@ -93,7 +125,7 @@ func TestCaptureRejectsSymlinkTarget(t *testing.T) {
 		t.Fatalf("os.ReadFile(real) returned error: %v", readErr)
 	}
 	if string(content) != logHeader {
-		t.Errorf("real target changed to %q", content)
+		t.Errorf("Capture(symlink target) real bytes = %q, want %q", content, logHeader)
 	}
 }
 
@@ -116,7 +148,7 @@ func TestCaptureDoesNotInitializeEmptyExistingLog(t *testing.T) {
 		t.Fatalf("os.ReadFile() returned error: %v", err)
 	}
 	if strings.HasPrefix(string(content), logHeader) || !strings.HasPrefix(string(content), "\n## 2026-07-09T00:00:00Z") {
-		t.Errorf("Capture() empty-log append = %q", content)
+		t.Errorf("Capture(empty log) bytes = %q, want entry prefix %q without %q", content, "\n## 2026-07-09T00:00:00Z", logHeader)
 	}
 }
 
@@ -140,7 +172,7 @@ func TestCaptureRepairsMissingFinalNewline(t *testing.T) {
 		t.Fatalf("os.ReadFile() returned error: %v", err)
 	}
 	if !strings.Contains(string(content), "# Existing without newline\n\n## 2026-07-09T00:00:00Z") {
-		t.Errorf("Capture() framing = %q", content)
+		t.Errorf("Capture(missing final newline) bytes = %q, want substring %q", content, "# Existing without newline\n\n## 2026-07-09T00:00:00Z")
 	}
 }
 
@@ -158,7 +190,7 @@ func FuzzMergeGuidanceIsIdempotent(f *testing.F) {
 			t.Fatalf("mergeGuidance(second) returned error after successful first merge: %v", err)
 		}
 		if string(first) != string(second) || change != guidanceUnchanged {
-			t.Errorf("mergeGuidance() is not idempotent")
+			t.Errorf("mergeGuidance(%q, exists=%t) second result changed, want identical bytes and state %v", existing, exists, guidanceUnchanged)
 		}
 	})
 }

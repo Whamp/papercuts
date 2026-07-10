@@ -39,6 +39,13 @@ func (s *Service) InitializeLog(ctx context.Context, request InitializeRequest) 
 		if err := requireDirectRegular(info); err != nil {
 			return result, operationError("initialize log", target, EffectUnchanged, err)
 		}
+		file, _, lockErr := lockExistingTarget(ctx, target)
+		if lockErr != nil {
+			return result, lockErr
+		}
+		if err := finishLocked(file); err != nil {
+			return result, operationError("finish initialization", target, EffectUnchanged, err)
+		}
 		result.State = InitializeAlreadyExists
 		return result, nil
 	} else if !errors.Is(statErr, fs.ErrNotExist) {
@@ -50,6 +57,7 @@ func (s *Service) InitializeLog(ctx context.Context, request InitializeRequest) 
 		".papercuts-init-*",
 		[]byte(logHeader),
 		0o600,
+		temporaryModeRespectUmask,
 	)
 	if err != nil {
 		return result, operationError("prepare temporary log", target, EffectUnchanged, err)
@@ -58,15 +66,15 @@ func (s *Service) InitializeLog(ctx context.Context, request InitializeRequest) 
 	if err := atomicfile.PublishNew(temporaryPath, target.logPath); err != nil {
 		cleanupErr := removeTemporary(temporaryPath)
 		if errors.Is(err, fs.ErrExist) {
-			info, statErr := os.Lstat(target.logPath)
-			if statErr != nil {
-				return result, operationError("inspect concurrent log", target, EffectUnchanged, errors.Join(err, statErr, cleanupErr))
-			}
-			if regularErr := requireDirectRegular(info); regularErr != nil {
-				return result, operationError("inspect concurrent log", target, EffectUnchanged, errors.Join(err, regularErr, cleanupErr))
-			}
 			if cleanupErr != nil {
 				return result, operationError("remove temporary log", target, EffectUnchanged, cleanupErr)
+			}
+			file, _, lockErr := lockExistingTarget(ctx, target)
+			if lockErr != nil {
+				return result, lockErr
+			}
+			if finishErr := finishLocked(file); finishErr != nil {
+				return result, operationError("finish concurrent initialization", target, EffectUnchanged, finishErr)
 			}
 			result.State = InitializeAlreadyExists
 			return result, nil

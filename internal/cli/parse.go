@@ -75,38 +75,34 @@ func parseCapture(args []string) (captureCommand, error) {
 		if err := markSeen(seen, name); err != nil {
 			return command, err
 		}
+		handled, nextIndex, err := parseTargetOption(name, inlineValue, hasInlineValue, args, index, &command.target)
+		if err != nil {
+			return command, err
+		}
+		if handled {
+			index = nextIndex
+			continue
+		}
 		switch name {
 		case "--help":
 			if hasInlineValue {
 				return command, &usageError{message: "--help does not take a value"}
 			}
 			command.help = true
-		case "--project":
-			if hasInlineValue {
-				return command, &usageError{message: "--project does not take a value"}
-			}
-			command.target.Project = true
-		case "--global":
-			if hasInlineValue {
-				return command, &usageError{message: "--global does not take a value"}
-			}
-			command.target.Global = true
 		case "--stdin":
 			if hasInlineValue {
 				return command, &usageError{message: "--stdin does not take a value"}
 			}
 			command.stdin = true
-		case "--severity", "--global-path", "--reporter", "--model":
-			value, nextIndex, err := optionValue(name, inlineValue, hasInlineValue, args, index)
+		case "--severity", "--reporter", "--model":
+			value, valueIndex, err := optionValue(name, inlineValue, hasInlineValue, args, index)
 			if err != nil {
 				return command, err
 			}
-			index = nextIndex
+			index = valueIndex
 			switch name {
 			case "--severity":
 				severityValue = &value
-			case "--global-path":
-				command.target.GlobalPath = &value
 			case "--reporter":
 				command.reporter = &value
 			case "--model":
@@ -128,11 +124,8 @@ func parseCapture(args []string) (captureCommand, error) {
 		return command, &usageError{code: usageInvalidSeverity, message: fmt.Sprintf("invalid severity %q; choose low, medium, or high", *severityValue)}
 	}
 	command.severity = severity
-	if command.target.Project && command.target.Global {
-		return command, &usageError{code: usageScopeConflict, message: "--project and --global cannot be used together"}
-	}
-	if command.target.GlobalPath != nil && !command.target.Global {
-		return command, &usageError{code: usageGlobalPathWithoutGlobal, message: "--global-path requires --global"}
+	if err := validateTargetOptions(command.target); err != nil {
+		return command, err
 	}
 	if command.stdin && len(positional) > 0 {
 		return command, &usageError{code: usageContentConflict, message: "provide either one description argument or --stdin, not both"}
@@ -158,22 +151,20 @@ func parseInit(args []string) (initCommand, error) {
 		if err := markSeen(seen, name); err != nil {
 			return command, err
 		}
+		handled, nextIndex, err := parseTargetOption(name, inlineValue, hasInlineValue, args, index, &command.target)
+		if err != nil {
+			return command, err
+		}
+		if handled {
+			index = nextIndex
+			continue
+		}
 		switch name {
 		case "--help":
 			if hasInlineValue {
 				return command, &usageError{message: "--help does not take a value"}
 			}
 			command.help = true
-		case "--project":
-			if hasInlineValue {
-				return command, &usageError{message: "--project does not take a value"}
-			}
-			command.target.Project = true
-		case "--global":
-			if hasInlineValue {
-				return command, &usageError{message: "--global does not take a value"}
-			}
-			command.target.Global = true
 		case "--agents":
 			if hasInlineValue {
 				return command, &usageError{message: "--agents does not take a value"}
@@ -190,13 +181,6 @@ func parseInit(args []string) (initCommand, error) {
 				return command, &usageError{message: "--agents and --no-agents cannot be used together"}
 			}
 			command.agents = agentsSkip
-		case "--global-path":
-			value, nextIndex, err := optionValue(name, inlineValue, hasInlineValue, args, index)
-			if err != nil {
-				return command, err
-			}
-			index = nextIndex
-			command.target.GlobalPath = &value
 		default:
 			if !strings.HasPrefix(argument, "-") {
 				return command, &usageError{message: fmt.Sprintf("unexpected argument %q", argument)}
@@ -207,13 +191,53 @@ func parseInit(args []string) (initCommand, error) {
 	if command.help {
 		return command, nil
 	}
-	if command.target.Project && command.target.Global {
-		return command, &usageError{code: usageScopeConflict, message: "--project and --global cannot be used together"}
-	}
-	if command.target.GlobalPath != nil && !command.target.Global {
-		return command, &usageError{code: usageGlobalPathWithoutGlobal, message: "--global-path requires --global"}
+	if err := validateTargetOptions(command.target); err != nil {
+		return command, err
 	}
 	return command, nil
+}
+
+func parseTargetOption(
+	name string,
+	inlineValue string,
+	hasInlineValue bool,
+	args []string,
+	index int,
+	target *papercuts.TargetOptions,
+) (bool, int, error) {
+	switch name {
+	case "--project":
+		if hasInlineValue {
+			return true, index, &usageError{message: "--project does not take a value"}
+		}
+		target.Project = true
+		return true, index, nil
+	case "--global":
+		if hasInlineValue {
+			return true, index, &usageError{message: "--global does not take a value"}
+		}
+		target.Global = true
+		return true, index, nil
+	case "--global-path":
+		value, nextIndex, err := optionValue(name, inlineValue, hasInlineValue, args, index)
+		if err != nil {
+			return true, index, err
+		}
+		target.GlobalPath = &value
+		return true, nextIndex, nil
+	default:
+		return false, index, nil
+	}
+}
+
+func validateTargetOptions(target papercuts.TargetOptions) error {
+	if target.Project && target.Global {
+		return &usageError{code: usageScopeConflict, message: "--project and --global cannot be used together"}
+	}
+	if target.GlobalPath != nil && !target.Global {
+		return &usageError{code: usageGlobalPathWithoutGlobal, message: "--global-path requires --global"}
+	}
+	return nil
 }
 
 func markSeen(seen map[string]struct{}, name string) error {

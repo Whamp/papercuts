@@ -37,7 +37,7 @@ func TestIntegrateGuidanceRetriesAfterConcurrentReplacement(t *testing.T) {
 	updated := 0
 	for index, err := range errorsByWorker {
 		if err != nil {
-			t.Errorf("IntegrateGuidance(worker %d) returned error: %v", index, err)
+			t.Errorf("IntegrateGuidance(worker %d) error = %v, want nil", index, err)
 			continue
 		}
 		if results[index].State == GuidanceUpdated {

@@ -31,13 +31,7 @@ jobs:
           go-version: ${{ env.PATCHED_GO_VERSION }}
           cache: false
       - name: Validate release tag
-        shell: bash
-        run: |
-          set -euo pipefail
-          if [[ ! "$GITHUB_REF_NAME" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.[1-9][0-9]*)?$ ]]; then
-            echo "invalid release tag: $GITHUB_REF_NAME" >&2
-            exit 1
-          fi
+        run: .github/scripts/validate-release-tag.sh "$GITHUB_REF_NAME"
       - name: Check formatting
         shell: bash
         run: test -z "$(gofmt -l .)"
@@ -48,6 +42,7 @@ jobs:
           "$(go env GOPATH)/bin/actionlint"
           shellcheck .github/scripts/*.sh
           .github/scripts/check-workflow-toolchains.sh
+          .github/scripts/test-release-scripts.sh
       - name: Audit workflows
         uses: zizmorcore/zizmor-action@192e21d79ab29983730a13d1382995c2307fbcaa # v0.5.7
         with:
@@ -171,6 +166,7 @@ jobs:
           mkdir smoke
           tar -xzf "$archive" -C smoke
           ./smoke/papercuts version | grep -F "papercuts $GITHUB_REF_NAME"
+          .github/scripts/smoke-cli.sh "$GITHUB_WORKSPACE/smoke/papercuts"
           install_dir=$(mktemp -d)
           installed="$install_dir/papercuts"
           previous="$install_dir/papercuts.previous"
@@ -212,6 +208,7 @@ jobs:
           Expand-Archive -Path $archive.FullName -DestinationPath smoke
           $version = & .\smoke\papercuts.exe version
           if ($version -notlike "papercuts $env:GITHUB_REF_NAME*") { throw "wrong version: $version" }
+          & .github/scripts/smoke-cli.ps1 -Binary .\smoke\papercuts.exe
           $installDir = Join-Path $env:RUNNER_TEMP "papercuts-bin"
           New-Item -ItemType Directory -Force -Path $installDir | Out-Null
           $installed = Join-Path $installDir "papercuts.exe"

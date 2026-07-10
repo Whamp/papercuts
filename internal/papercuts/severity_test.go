@@ -11,7 +11,7 @@ func TestParseSeverityAcceptsCanonicalValues(t *testing.T) {
 			t.Parallel()
 			got, err := ParseSeverity(value)
 			if err != nil {
-				t.Errorf("ParseSeverity(%q) returned error: %v", value, err)
+				t.Errorf("ParseSeverity(%q) error = %v, want nil", value, err)
 			}
 			if got.String() != value {
 				t.Errorf("ParseSeverity(%q).String() = %q, want %q", value, got.String(), value)

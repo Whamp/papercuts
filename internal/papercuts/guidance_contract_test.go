@@ -35,7 +35,7 @@ func TestIntegrateGuidancePreservesPlainFileBytesModeAndNewlines(t *testing.T) {
 		t.Fatalf("IntegrateGuidance(first) returned error: %v", err)
 	}
 	if first.State != GuidanceUpdated || first.Effect != EffectDurable {
-		t.Errorf("IntegrateGuidance(first) = %#v", first)
+		t.Errorf("IntegrateGuidance(first) = %#v, want state %v and effect %v", first, GuidanceUpdated, EffectDurable)
 	}
 	content, err := os.ReadFile(path)
 	if err != nil {
@@ -46,7 +46,7 @@ func TestIntegrateGuidancePreservesPlainFileBytesModeAndNewlines(t *testing.T) {
 	}
 	withoutCRLF := bytes.ReplaceAll(content, []byte("\r\n"), nil)
 	if bytes.ContainsAny(withoutCRLF, "\r\n") {
-		t.Errorf("IntegrateGuidance() introduced mixed line endings: %q", content)
+		t.Errorf("IntegrateGuidance(CRLF file) bytes = %q, want CRLF-only line endings", content)
 	}
 	if runtime.GOOS != "windows" {
 		info, statErr := os.Stat(path)
@@ -63,14 +63,14 @@ func TestIntegrateGuidancePreservesPlainFileBytesModeAndNewlines(t *testing.T) {
 		t.Fatalf("IntegrateGuidance(second) returned error: %v", err)
 	}
 	if second.State != GuidanceUnchanged || second.Effect != EffectUnchanged {
-		t.Errorf("IntegrateGuidance(second) = %#v", second)
+		t.Errorf("IntegrateGuidance(second) = %#v, want state %v and effect %v", second, GuidanceUnchanged, EffectUnchanged)
 	}
 	secondContent, err := os.ReadFile(path)
 	if err != nil {
 		t.Fatalf("os.ReadFile(second) returned error: %v", err)
 	}
 	if !bytes.Equal(secondContent, content) {
-		t.Error("idempotent integration changed AGENTS.md bytes")
+		t.Errorf("IntegrateGuidance(second) bytes = %q, want first result bytes %q", secondContent, content)
 	}
 }
 
@@ -95,6 +95,6 @@ func TestIntegrateGuidanceRejectsMalformedMarkersWithoutChangingFile(t *testing.
 		t.Fatalf("os.ReadFile() returned error: %v", readErr)
 	}
 	if !bytes.Equal(content, original) {
-		t.Errorf("malformed AGENTS.md changed from %q to %q", original, content)
+		t.Errorf("IntegrateGuidance(malformed markers) bytes = %q, want original bytes %q", content, original)
 	}
 }

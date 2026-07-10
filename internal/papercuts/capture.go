@@ -12,10 +12,19 @@ import (
 	"github.com/Whamp/papercuts/internal/filelock"
 )
 
-const (
-	lockTimeout = 5 * time.Second
-	lockRetry   = 25 * time.Millisecond
-)
+type capturePersistence struct {
+	write    func(*filelock.File, []byte) (int, error)
+	sync     func(*filelock.File) error
+	truncate func(*filelock.File, int64) error
+}
+
+func defaultCapturePersistence() capturePersistence {
+	return capturePersistence{
+		write:    func(file *filelock.File, content []byte) (int, error) { return file.Write(content) },
+		sync:     func(file *filelock.File) error { return file.Sync() },
+		truncate: func(file *filelock.File, size int64) error { return file.Truncate(size) },
+	}
+}
 
 // ErrNotInitialized indicates that the selected log does not exist.
 var ErrNotInitialized = errors.New("papercuts log is not initialized")
@@ -70,30 +79,9 @@ func (s *Service) Capture(ctx context.Context, request CaptureRequest) (CaptureR
 		return result, operationError("capture", target, EffectUnchanged, err)
 	}
 
-	lockCtx, cancel := context.WithTimeout(ctx, lockTimeout)
-	defer cancel()
-	file, err := filelock.Open(lockCtx, target.logPath, lockRetry)
+	file, fileInfo, err := lockExistingTarget(ctx, target)
 	if err != nil {
-		if errors.Is(err, context.DeadlineExceeded) && ctx.Err() == nil {
-			err = errors.Join(ErrLockTimeout, err)
-		}
-		return result, operationError("lock log", target, EffectUnchanged, err)
-	}
-
-	pathInfo, err = os.Lstat(target.logPath)
-	if err != nil {
-		return result, operationError("revalidate log", target, EffectUnchanged, errors.Join(err, finishLocked(file)))
-	}
-	fileInfo, err := file.Stat()
-	if err != nil {
-		return result, operationError("inspect locked log", target, EffectUnchanged, errors.Join(err, finishLocked(file)))
-	}
-	if err := requireDirectRegular(pathInfo); err != nil {
-		return result, operationError("revalidate log", target, EffectUnchanged, errors.Join(err, finishLocked(file)))
-	}
-	if !fileInfo.Mode().IsRegular() || !os.SameFile(pathInfo, fileInfo) {
-		identityErr := fmt.Errorf("locked file no longer matches configured path")
-		return result, operationError("revalidate log", target, EffectUnchanged, errors.Join(identityErr, finishLocked(file)))
+		return result, err
 	}
 
 	originalSize := fileInfo.Size()
@@ -105,16 +93,16 @@ func (s *Service) Capture(ctx context.Context, request CaptureRequest) (CaptureR
 		return result, operationError("seek log", target, EffectUnchanged, errors.Join(err, finishLocked(file)))
 	}
 
-	written, writeErr := file.Write(payload)
+	written, writeErr := s.capturePersistence.write(file, payload)
 	if writeErr != nil || written != len(payload) {
 		if writeErr == nil {
 			writeErr = fmt.Errorf("short write: wrote %d of %d bytes", written, len(payload))
 		}
-		effect, rollbackErr := rollbackAppend(file, originalSize)
+		effect, rollbackErr := s.rollbackAppend(file, originalSize)
 		return resultWithEffect(result, effect), operationError("append capture", target, effect, errors.Join(writeErr, rollbackErr, finishLocked(file)))
 	}
-	if err := file.Sync(); err != nil {
-		effect, rollbackErr := rollbackAppend(file, originalSize)
+	if err := s.capturePersistence.sync(file); err != nil {
+		effect, rollbackErr := s.rollbackAppend(file, originalSize)
 		return resultWithEffect(result, effect), operationError("sync capture", target, effect, errors.Join(err, rollbackErr, finishLocked(file)))
 	}
 
@@ -142,20 +130,14 @@ func appendPayload(file *filelock.File, size int64, rendered []byte) ([]byte, er
 	return payload, nil
 }
 
-func rollbackAppend(file *filelock.File, originalSize int64) (Effect, error) {
-	if err := file.Truncate(originalSize); err != nil {
+func (s *Service) rollbackAppend(file *filelock.File, originalSize int64) (Effect, error) {
+	if err := s.capturePersistence.truncate(file, originalSize); err != nil {
 		return EffectIndeterminate, fmt.Errorf("rollback append: %w", err)
 	}
-	if err := file.Sync(); err != nil {
+	if err := s.capturePersistence.sync(file); err != nil {
 		return EffectIndeterminate, fmt.Errorf("sync rollback: %w", err)
 	}
 	return EffectUnchanged, nil
-}
-
-func finishLocked(file *filelock.File) error {
-	unlockErr := file.Unlock()
-	closeErr := file.Close()
-	return errors.Join(unlockErr, closeErr)
 }
 
 func resultWithEffect(result CaptureResult, effect Effect) CaptureResult {

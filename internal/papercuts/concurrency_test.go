@@ -66,7 +66,7 @@ func TestCaptureSerializesConcurrentProcesses(t *testing.T) {
 		t.Fatalf("filepath.Glob() returned error: %v", err)
 	}
 	if len(matches) != 0 {
-		t.Errorf("temporary or lock artifacts remain: %v", matches)
+		t.Errorf("capture contention artifacts = %v, want none", matches)
 	}
 }
 
