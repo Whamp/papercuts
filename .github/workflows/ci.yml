@@ -31,7 +31,7 @@ jobs:
       - name: Lint workflows
         shell: bash
         run: |
-          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.12
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.11
           "$(go env GOPATH)/bin/actionlint"
       - name: Audit workflows
         uses: zizmorcore/zizmor-action@192e21d79ab29983730a13d1382995c2307fbcaa # v0.5.7
