@@ -33,6 +33,10 @@ A tiny standalone `papercuts` CLI for Linux, macOS, and Windows, accompanied by 
 - [Choose the Repository License](issues/12-choose-repository-license.md) — Will selected canonical SPDX MIT text with `Copyright (c) 2026 Will Hampson` for the repository and every release archive.
 - [Draft and Approve the Implementation Specification](issues/11-approve-implementation-specification.md) — The complete specification is approved with MIT licensing, public publication, immutable releases, and native Linux, macOS, and Windows evidence.
 
+## Completion evidence
+
+- [Completion audit](completion-audit.md) — Every issue, goal requirement, acceptance command, hosted CI job, native archive lifecycle, and repository setting maps to final evidence at `ab819e1`.
+
 ## Out of scope
 
 - Automated repair, ticket generation, implementation, or code review. A future configurable loop may compose `to-spec → to-tickets → implement → code-review`.
