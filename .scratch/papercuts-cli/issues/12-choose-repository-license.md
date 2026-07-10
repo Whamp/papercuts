@@ -18,7 +18,9 @@ Will’s public GitHub repositories predominantly use MIT when they declare a li
 
 Answer with one of:
 
-- `MIT` (recommended)
+- `MIT` (recommended). This authorizes the canonical [SPDX MIT text](https://spdx.org/licenses/MIT.txt) with `Copyright (c) 2026 Will Hampson`, matching the public name on GitHub account `Whamp`.
 - `Apache-2.0`
 - another exact license identifier/text
 - `all rights reserved` (public source with no open-source grant)
+
+Specify a different copyright holder or year with the answer when desired; otherwise the `MIT` meaning above is complete and requires no follow-up.
