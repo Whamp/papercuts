@@ -12,6 +12,15 @@ The canonical release channel is [github.com/Whamp/papercuts/releases](https://g
 
 Do not push a release tag until every setup step is complete.
 
+To validate the complete release graph without creating a tag or release, run:
+
+```sh
+gh workflow run Release --ref master
+gh run watch --repo Whamp/papercuts
+```
+
+A manual run builds snapshot archives, verifies their contract, and runs native archive lifecycle smoke on Linux, macOS, and Windows. Its publish job is skipped.
+
 ## Version contract
 
 - The first stable version is `v0.1.0`.

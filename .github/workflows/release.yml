@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -31,6 +32,7 @@ jobs:
           go-version: ${{ env.PATCHED_GO_VERSION }}
           cache: false
       - name: Validate release tag
+        if: github.event_name == 'push'
         run: .github/scripts/validate-release-tag.sh "$GITHUB_REF_NAME"
       - name: Check formatting
         shell: bash
@@ -120,7 +122,7 @@ jobs:
         with:
           distribution: goreleaser
           version: v2.14.1
-          args: release --clean --skip=publish
+          args: ${{ github.event_name == 'push' && 'release --clean --skip=publish' || 'release --snapshot --clean --skip=publish' }}
       - name: Inspect release contract and verify checksums
         run: .github/scripts/inspect-release.sh
       - name: Upload release build
@@ -163,9 +165,10 @@ jobs:
           goarch=$(go env GOARCH)
           archive=$(find dist -maxdepth 1 -name "papercuts_*_${goos}_${goarch}.tar.gz" -print -quit)
           test -n "$archive"
+          expected_version="v$(jq -er .version dist/metadata.json)"
           mkdir smoke
           tar -xzf "$archive" -C smoke
-          ./smoke/papercuts version | grep -F "papercuts $GITHUB_REF_NAME"
+          ./smoke/papercuts version | grep -F "papercuts $expected_version"
           .github/scripts/smoke-cli.sh "$GITHUB_WORKSPACE/smoke/papercuts"
           install_dir=$(mktemp -d)
           installed="$install_dir/papercuts"
@@ -177,7 +180,7 @@ jobs:
           "$previous" version | grep -F "papercuts $previous_version"
 
           install -m 0755 ./smoke/papercuts "$installed"
-          "$installed" version | grep -F "papercuts $GITHUB_REF_NAME"
+          "$installed" version | grep -F "papercuts $expected_version"
           rm "$installed"
 
           install -m 0755 "$previous" "$installed"
@@ -187,7 +190,7 @@ jobs:
           "$installed" capture --severity low "before release upgrade"
 
           install -m 0755 "$GITHUB_WORKSPACE/smoke/papercuts" "$installed"
-          "$installed" version | grep -F "papercuts $GITHUB_REF_NAME"
+          "$installed" version | grep -F "papercuts $expected_version"
           "$installed" capture --severity low "after release upgrade"
 
           install -m 0755 "$previous" "$installed"
@@ -206,8 +209,10 @@ jobs:
           $archive = Get-ChildItem "dist/papercuts_*_windows_${arch}.zip" | Select-Object -First 1
           if (-not $archive) { throw "Windows archive not found for $arch" }
           Expand-Archive -Path $archive.FullName -DestinationPath smoke
+          $metadata = Get-Content dist\metadata.json -Raw | ConvertFrom-Json
+          $expectedVersion = "v$($metadata.version)"
           $version = & .\smoke\papercuts.exe version
-          if ($version -notlike "papercuts $env:GITHUB_REF_NAME*") { throw "wrong version: $version" }
+          if ($version -notlike "papercuts $expectedVersion*") { throw "wrong version: $version" }
           & .github/scripts/smoke-cli.ps1 -Binary .\smoke\papercuts.exe
           $installDir = Join-Path $env:RUNNER_TEMP "papercuts-bin"
           New-Item -ItemType Directory -Force -Path $installDir | Out-Null
@@ -222,7 +227,7 @@ jobs:
 
           Copy-Item .\smoke\papercuts.exe $installed
           $version = & $installed version
-          if ($version -notlike "papercuts $env:GITHUB_REF_NAME*") { throw "installed wrong version: $version" }
+          if ($version -notlike "papercuts $expectedVersion*") { throw "installed wrong version: $version" }
           Remove-Item $installed
 
           Copy-Item $previous $installed
@@ -234,7 +239,7 @@ jobs:
 
           Copy-Item -Force "$env:GITHUB_WORKSPACE\smoke\papercuts.exe" $installed
           $version = & $installed version
-          if ($version -notlike "papercuts $env:GITHUB_REF_NAME*") { throw "upgrade failed: $version" }
+          if ($version -notlike "papercuts $expectedVersion*") { throw "upgrade failed: $version" }
           & $installed capture --severity low "after release upgrade"
 
           Copy-Item -Force $previous $installed
@@ -252,6 +257,7 @@ jobs:
 
   publish:
     name: Attest and publish
+    if: github.event_name == 'push'
     needs: native-smoke
     permissions:
       contents: write # Create and publish the release and upload its assets.
