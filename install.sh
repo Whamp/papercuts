@@ -1,6 +1,29 @@
 #!/bin/sh
 set -eu
 
+usage() {
+  cat <<'EOF'
+Usage: install.sh [--help]
+
+Install the latest stable Papercuts release.
+
+Environment:
+  PAPERCUTS_VERSION      Release tag to install (default: latest)
+  PAPERCUTS_INSTALL_DIR  Installation directory (default: ~/.local/bin)
+EOF
+}
+
+if [ "$#" -gt 0 ]; then
+  if [ "$#" -eq 1 ] && { [ "$1" = --help ] || [ "$1" = -h ]; }; then
+    usage
+    exit 0
+  fi
+
+  printf 'papercuts: unexpected installer argument: %s\n' "$1" >&2
+  printf 'Run install.sh --help for usage.\n' >&2
+  exit 2
+fi
+
 repository_url=https://github.com/Whamp/papercuts
 install_dir=${PAPERCUTS_INSTALL_DIR:-"$HOME/.local/bin"}
 version=${PAPERCUTS_VERSION:-latest}

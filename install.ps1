@@ -1,5 +1,25 @@
+[CmdletBinding()]
+param(
+    [Alias('h')]
+    [switch] $Help
+)
+
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
+
+if ($Help) {
+    @'
+Usage: install.ps1 [-Help]
+
+Install the latest stable Papercuts release.
+
+Environment:
+  PAPERCUTS_VERSION      Release tag to install (default: latest)
+  PAPERCUTS_INSTALL_DIR  Installation directory (default: ~/bin)
+'@
+    exit 0
+}
+
 [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
 $repositoryUrl = 'https://github.com/Whamp/papercuts'

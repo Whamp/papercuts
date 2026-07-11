@@ -43,6 +43,27 @@ try {
 
     $env:PAPERCUTS_INSTALL_DIR = $installDirectory
     $env:PAPERCUTS_VERSION = $null
+
+    $helpOutput = & $installer -Help | Out-String
+    if ($helpOutput -notlike '*Usage: install.ps1 [-Help]*') {
+        throw "installer help did not include usage; output was: $helpOutput"
+    }
+    if ((Test-Path -LiteralPath $requestLog) -or (Test-Path -LiteralPath (Join-Path $installDirectory 'papercuts.exe'))) {
+        throw 'installer help performed installation work'
+    }
+
+    $failed = $false
+    try {
+        & $installer -Unexpected | Out-Null
+    }
+    catch {
+        $failed = $true
+    }
+    if (-not $failed) { throw 'installer accepted an unexpected argument' }
+    if ((Test-Path -LiteralPath $requestLog) -or (Test-Path -LiteralPath (Join-Path $installDirectory 'papercuts.exe'))) {
+        throw 'unexpected installer argument performed installation work'
+    }
+
     $output = & $installer | Out-String
     $installed = Join-Path $installDirectory 'papercuts.exe'
     if ((Get-FileHash -Algorithm SHA256 $installed).Hash -ne $fixtureHash) {

@@ -61,6 +61,33 @@ cp "\$source_file" "\$output"
 EOF
 chmod 0755 "$fake_bin/curl"
 
+help_output=$(
+  PATH="$fake_bin:/usr/bin:/bin" \
+    HOME="$home_dir" \
+    PAPERCUTS_INSTALL_DIR="$install_dir" \
+    sh "$installer" --help
+)
+if [[ "$help_output" != *'Usage: install.sh [--help]'* ]]; then
+  printf 'installer help did not include usage; output was:\n%s\n' "$help_output" >&2
+  exit 1
+fi
+if [[ -s "$temporary/curl.log" || -e "$install_dir/papercuts" ]]; then
+  printf 'installer help performed installation work\n' >&2
+  exit 1
+fi
+
+if PATH="$fake_bin:/usr/bin:/bin" \
+  HOME="$home_dir" \
+  PAPERCUTS_INSTALL_DIR="$install_dir" \
+  sh "$installer" unexpected >/dev/null 2>&1; then
+  printf 'installer accepted an unexpected argument\n' >&2
+  exit 1
+fi
+if [[ -s "$temporary/curl.log" || -e "$install_dir/papercuts" ]]; then
+  printf 'unexpected installer argument performed installation work\n' >&2
+  exit 1
+fi
+
 output=$(
   PATH="$fake_bin:/usr/bin:/bin" \
     HOME="$home_dir" \
