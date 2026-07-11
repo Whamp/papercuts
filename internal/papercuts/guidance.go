@@ -8,15 +8,16 @@ import (
 const guidancePreamble = `<!-- papercuts:begin -->
 ## Papercuts
 
-Capture concrete workflow friction encountered while pursuing another task:
+Capture a **papercut**—one concrete friction instance encountered while doing other work—when it occurs:
 
-` + "```text\n" + `papercuts capture --severity <low|medium|high> "<what you tried, what happened, and the impact>"
-papercuts capture --severity <low|medium|high> --stdin
-` + "```\n\n"
+` + "```text\n" + `papercuts capture --severity <level> "<attempt; friction; impact; workaround or current state>"
+` + "```\n\n" + `Severity: `
 
-const guidancePostamble = `- When several definitions apply, use the highest severity.
+const guidancePostamble = `. Choose the highest applicable level.
 
-Project scope is the default. Add ` + "`--global`" + ` only for friction outside this project or in shared tooling. Supply exactly one quoted description, or pipe a multiline description with ` + "`--stdin`" + `. Describe one instance and include a workaround or current state when known. Capture fatal and non-fatal friction; continue safe work, but do not run or continue unsafe work. Never include secrets. Use the product issue tracker for product bugs and feature requests.
+Project captures target ` + "`PAPERCUTS.md`" + ` in the exact working directory; run from the directory containing that log. Use ` + "`--global`" + ` only for shared tooling or environment friction. Run ` + "`papercuts capture --help`" + ` for multiline input and other options. When a log is missing, surface the suggested init command and preserve the intended scope.
+
+A capture is complete when the CLI confirms it and the description records one causal instance. Product bugs and feature requests belong in the product issue tracker. Refer to secrets by role, never value. Resume only safe work.
 <!-- papercuts:end -->
 `
 
@@ -29,8 +30,11 @@ func ManagedSection() []byte {
 func managedSection() []byte {
 	var section strings.Builder
 	section.WriteString(guidancePreamble)
-	for _, definition := range severityDefinitions {
-		fmt.Fprintf(&section, "- `%s`: %s\n", definition.Value, definition.Meaning)
+	for index, definition := range severityDefinitions {
+		if index > 0 {
+			section.WriteString("; ")
+		}
+		fmt.Fprintf(&section, "`%s` = %s", definition.Value, definition.Meaning)
 	}
 	section.WriteString(guidancePostamble)
 	return []byte(section.String())

@@ -24,19 +24,19 @@ var severityDefinitions = [...]SeverityDefinition{
 	{
 		Severity:    severityLow,
 		Value:       "low",
-		Meaning:     "an avoidable detour that did not change your approach or confidence in the result.",
+		Meaning:     "detour only",
 		HelpSummary: "Avoidable detour; approach and confidence remained intact",
 	},
 	{
 		Severity:    severityMedium,
 		Value:       "medium",
-		Meaning:     "meaningful rework, repeated attempts, a workaround, a changed approach, or reduced confidence while the task remained safely completable.",
+		Meaning:     "rework, retries, workaround, changed approach, or reduced confidence",
 		HelpSummary: "Meaningful rework, retries, workaround, changed approach, or reduced confidence",
 	},
 	{
 		Severity:    severityHigh,
 		Value:       "high",
-		Meaning:     "blocked completion, required human or environment intervention, or created a credible risk of an incorrect, destructive, or insecure result.",
+		Meaning:     "blocked work, intervention, or credible wrong/destructive/insecure risk",
 		HelpSummary: "Blocked work, required intervention, or credible risk of a wrong, destructive, or insecure result",
 	},
 }
